@@ -20,7 +20,7 @@ Thanks for helping improve ATLAS. Please read [docs/ARCHITECTURE.md](docs/ARCHIT
 ## Development setup
 
 ```bash
-npm install          # not `npm ci` unless you have a C++ toolchain (see README)
+npm install          # .npmrc skips install scripts; no compiler needed
 npm run setup        # migrate + seed the fictional demo account
 npm run dev
 ```

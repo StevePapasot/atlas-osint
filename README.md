@@ -33,7 +33,7 @@ ranges, invented handles). Every simulated record is labelled **SIMULATED** in t
 Requirements: **Node.js ≥ 22.12** and npm. Nothing else — the database is a local SQLite file.
 
 ```bash
-npm install                 # use `npm install`, see note below
+npm install                 # or `npm ci`
 npm run setup               # create the database and the fictional demo account + sample investigation
 npm run dev                 # http://localhost:3000
 ```
@@ -47,9 +47,8 @@ Sign in with the demo account:
 …or register your own account (the first account becomes admin). Change the demo password with
 `ATLAS_DEMO_PASSWORD` before seeding anywhere other than your own machine, or skip seeding entirely.
 
-> `npm ci` with npm 10 ignores `better-sqlite3`'s bundled prebuilt binaries and compiles it from source, which needs
-> Python and a C++ toolchain. `npm install` uses the prebuilt binaries. In CI use `npm ci --ignore-scripts && npm rebuild esbuild`
-> (what the Dockerfile does).
+> No compiler or Python is needed: the repository's `.npmrc` skips install scripts, because every native module
+> (better-sqlite3, sharp) ships prebuilt binaries for Windows, macOS and Linux.
 
 ### Production build
 

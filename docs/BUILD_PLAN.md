@@ -76,4 +76,6 @@ _Living document. Updated as milestones complete._
 - Redirects are followed manually so every hop is SSRF-validated and credentials never cross origins.
 - `ATLAS_ALLOW_TARGET_FETCH` became a real, opt-in provider (`url.fetch`) instead of an unused flag; an unimplemented
   `SENTRY_DSN` setting was removed rather than shipped as a placebo.
-- The Dockerfile uses `npm ci --ignore-scripts` because npm 10 ignores better-sqlite3's `gypfile: false`.
+- Installing from the lockfile makes npm 10 ignore better-sqlite3's `gypfile: false` and compile it from source
+  (needs Python + C++). A project `.npmrc` sets `ignore-scripts=true`; all native modules use bundled prebuilt
+  binaries. Verified with a fresh clone: install, setup, dev server and sign-in.

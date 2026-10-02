@@ -47,8 +47,8 @@ The image runs as an unprivileged user, stores everything under `/data`, exposes
 - Behind a TLS-inspecting proxy: `--secret id=extra_ca,src=/path/to/proxy-ca.pem` (and `--network host` plus
   `--build-arg HTTPS_PROXY=…` if the proxy listens on the host's loopback).
 
-The image intentionally runs `npm ci --ignore-scripts`: npm 10 ignores better-sqlite3's `"gypfile": false` and would
-try to compile it from source. The build smoke-tests better-sqlite3 and sharp before continuing.
+The image runs `npm ci --ignore-scripts` (as the repository's `.npmrc` does for local installs): npm 10 ignores
+better-sqlite3's `"gypfile": false` and would try to compile it from source. The build smoke-tests better-sqlite3 and sharp before continuing.
 
 ## 3. Docker Compose (PostgreSQL + Redis + worker)
 

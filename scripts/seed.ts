@@ -11,6 +11,8 @@ import { createInvestigation, startInvestigation } from '../src/server/repositor
 import { processNextJob } from '../src/server/engine/runner';
 
 async function main() {
+  // Keep first-run output readable: only errors from the engine (override with ATLAS_LOG_LEVEL).
+  process.env.ATLAS_LOG_LEVEL ??= 'error';
   await migrateToLatest(db());
   const email = process.env.ATLAS_DEMO_EMAIL ?? 'demo@atlas-osint.local';
   const password = process.env.ATLAS_DEMO_PASSWORD ?? 'atlas-demo-2026';
@@ -43,7 +45,10 @@ async function main() {
       await startInvestigation(id, user.id);
       process.env.ATLAS_DEMO_FAST = process.env.ATLAS_DEMO_FAST ?? 'true';
       const status = await processNextJob(db());
-      console.log(`[atlas] sample demo investigation ${id} collected (${status})`);
+      console.log(`[atlas] sample demo investigation created (${status})`);
+      if (status === 'partially_completed') {
+        console.log('[atlas] "partially completed" is expected: one simulated source always fails, to demonstrate error handling.');
+      }
     }
   }
   console.log('\n  Sign in at http://localhost:3000/login');
