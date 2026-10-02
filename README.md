@@ -30,7 +30,9 @@ ranges, invented handles). Every simulated record is labelled **SIMULATED** in t
 
 ## Quick start (local, no API keys)
 
-Requirements: **Node.js ≥ 22.12** and npm. Nothing else — the database is a local SQLite file.
+Requirements: **Node.js 22.19 or newer** (the current LTS from [nodejs.org](https://nodejs.org) is recommended) and npm.
+Nothing else — the database is a local SQLite file. Older Node 22 releases are refused with a clear message, because
+they make the SQLite driver crash silently.
 
 ```bash
 npm install                 # or `npm ci`

@@ -13,7 +13,7 @@ ATLAS needs a long-running Node.js server (jobs, file uploads, native modules su
 serverless-only platforms are not a good fit for the worker; the web part can run anywhere Next.js runs in Node mode
 as long as a worker process runs alongside it.
 
-Requirements: Node.js ≥ 22.12 (the Docker image uses `node:22-bookworm-slim`), ~1 GB RAM per process (OCR is the
+Requirements: Node.js ≥ 22.19 (the Docker image uses `node:22-bookworm-slim`), ~1 GB RAM per process (OCR is the
 heaviest task), persistent storage for `ATLAS_DATA_DIR` (uploads) and, with SQLite, the database file.
 
 ## 1. Single process (SQLite)

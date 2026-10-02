@@ -3,6 +3,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { Kysely, PostgresAdapter, PostgresDialect, SqliteDialect } from 'kysely';
 import type { Database } from './schema';
+import { assertSupportedNode } from '../config/runtime';
 
 export type DialectName = 'sqlite' | 'postgres';
 
@@ -25,6 +26,8 @@ function sqlitePath(url: string): string {
 }
 
 export function createDb(url: string): DbHolder {
+  // Fail with a clear message instead of a silent native crash (see config/runtime.ts).
+  assertSupportedNode();
   const dialect = resolveDialect(url);
   if (dialect === 'postgres') {
     // eslint-disable-next-line @typescript-eslint/no-require-imports

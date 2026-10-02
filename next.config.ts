@@ -1,4 +1,13 @@
 import type { NextConfig } from 'next';
+import { nodeVersionProblem } from './src/server/config/runtime';
+
+// Stop `next dev` / `next build` / `next start` with a clear message on unsupported Node.js versions, instead of
+// letting the SQLite driver crash the server silently later.
+const nodeProblem = nodeVersionProblem();
+if (nodeProblem) {
+  console.error(`\n  ✖ ${nodeProblem}\n`);
+  process.exit(1);
+}
 
 const securityHeaders = [
   { key: 'X-Content-Type-Options', value: 'nosniff' },
