@@ -4,7 +4,9 @@ import type { AddressInfo } from 'node:net';
 import { createHttpClient } from '@/server/providers/http';
 
 let server: http.Server;
+let other: http.Server;
 let base = '';
+let otherBase = '';
 
 beforeAll(async () => {
   process.env.ATLAS_ALLOW_PRIVATE_EGRESS = 'true'; // local test server on 127.0.0.1
@@ -21,14 +23,24 @@ beforeAll(async () => {
     if (u.pathname === '/404') { res.statusCode = 404; return res.end('{}'); }
     if (u.pathname === '/big') return res.end('x'.repeat(50_000));
     if (u.pathname === '/badjson') return res.end('{not json');
+    if (u.pathname === '/echo') return res.end(JSON.stringify(req.headers));
+    if (u.pathname === '/redirect-same') { res.statusCode = 302; res.setHeader('location', '/echo'); return res.end(); }
+    if (u.pathname === '/redirect-other') { res.statusCode = 302; res.setHeader('location', `${otherBase}/echo`); return res.end(); }
+    if (u.pathname === '/redirect-file') { res.statusCode = 301; res.setHeader('location', 'file:///etc/passwd'); return res.end(); }
+    if (u.pathname === '/redirect-creds') { res.statusCode = 301; res.setHeader('location', `http://user:pw@127.0.0.1:1/`); return res.end(); }
+    if (u.pathname === '/loop') { res.statusCode = 302; res.setHeader('location', '/loop'); return res.end(); }
     res.statusCode = 400;
     res.end();
   });
   await new Promise<void>((r) => server.listen(0, '127.0.0.1', () => r()));
   base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
+  other = http.createServer((req, res) => res.end(JSON.stringify(req.headers)));
+  await new Promise<void>((r) => other.listen(0, '127.0.0.1', () => r()));
+  otherBase = `http://127.0.0.1:${(other.address() as AddressInfo).port}`;
 });
 afterAll(() => {
   server.close();
+  other.close();
   delete process.env.ATLAS_ALLOW_PRIVATE_EGRESS;
   delete process.env.ATLAS_IGNORE_PROXY;
 });
@@ -65,5 +77,25 @@ describe('provider HTTP client', () => {
     process.env.ATLAS_ALLOW_PRIVATE_EGRESS = 'false';
     await expect(client().request(`${base}/ok`)).rejects.toMatchObject({ category: 'invalid_input' });
     process.env.ATLAS_ALLOW_PRIVATE_EGRESS = 'true';
+  });
+
+  it('follows same-origin redirects and keeps headers', async () => {
+    const r = await client().request(`${base}/redirect-same`, { headers: { 'x-api-key': 'k1' } });
+    expect(r.json<Record<string, string>>()['x-api-key']).toBe('k1');
+  });
+  it('drops credentials when a redirect crosses origins', async () => {
+    const r = await client().request(`${base}/redirect-other`, { headers: { 'x-api-key': 'secret-key', authorization: 'Bearer t', accept: 'application/json' } });
+    const echoed = r.json<Record<string, string>>();
+    expect(echoed['x-api-key']).toBeUndefined();
+    expect(echoed.authorization).toBeUndefined();
+    expect(echoed.accept).toBe('application/json');
+  });
+  it('re-validates every redirect hop', async () => {
+    await expect(client().request(`${base}/redirect-file`)).rejects.toMatchObject({ category: 'invalid_input' });
+    await expect(client().request(`${base}/redirect-creds`)).rejects.toMatchObject({ category: 'invalid_input' });
+    await expect(client().request(`${base}/loop`)).rejects.toThrow(/Too many redirects/);
+  });
+  it('refuses non-GET requests to untrusted URLs', async () => {
+    await expect(client().request(`${base}/ok`, { method: 'POST', untrustedUrl: true })).rejects.toMatchObject({ category: 'invalid_input' });
   });
 });

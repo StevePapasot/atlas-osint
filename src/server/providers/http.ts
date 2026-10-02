@@ -27,7 +27,7 @@ export function dispatcher(): Dispatcher {
 function describeNetworkError(err: unknown): { message: string; denied: boolean } {
   const cause = (err as { cause?: { code?: string; message?: string } })?.cause;
   const msg = cause?.message ?? (err instanceof Error ? err.message : String(err));
-  const code = cause?.code ?? '';
+  const code = cause?.code ?? (err as { code?: string })?.code ?? '';
   if (/Proxy response \((403|407)\)/i.test(msg)) {
     return { message: 'Egress to this host is denied by the network proxy policy.', denied: true };
   }
@@ -60,35 +60,66 @@ async function readLimited(res: Response, maxBytes: number): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+const MAX_REDIRECTS = 5;
+/** Headers that may follow a redirect to a different origin; everything else (API keys!) is dropped. */
+const CROSS_ORIGIN_SAFE_HEADERS = new Set(['accept', 'accept-language']);
+
+async function validateDestination(raw: string, strictDns: boolean): Promise<URL> {
+  const u = assertSafeUrlShape(raw);
+  // Behind an egress proxy the proxy resolves names, so fixed provider endpoints skip the local DNS check. URLs that
+  // came from users or documents are always checked, and must resolve to public addresses (fail closed).
+  if (!proxyConfigured() || strictDns) await assertPublicHost(u.hostname);
+  return u;
+}
+
 export function createHttpClient(opts: { signal: AbortSignal; userAgent: string; defaultTimeoutMs: number }): HttpClient {
   return {
     async request(url: string, req: HttpRequestOptions = {}): Promise<HttpResponse> {
+      const strict = Boolean(req.untrustedUrl);
+      if (strict && (req.method ?? 'GET') !== 'GET') throw new ProviderError('invalid_input', 'Only GET is permitted for untrusted URLs.');
+      const toProviderError = (err: unknown) =>
+        err instanceof SsrfBlockedError ? new ProviderError('invalid_input', `Blocked unsafe URL: ${err.message}`) : new ProviderError('network', describeNetworkError(err).message, true);
       let parsed: URL;
       try {
-        parsed = assertSafeUrlShape(url);
-        if (!proxyConfigured()) await assertPublicHost(parsed.hostname);
+        parsed = await validateDestination(url, strict);
       } catch (err) {
-        if (err instanceof SsrfBlockedError) throw new ProviderError('invalid_input', `Blocked unsafe URL: ${err.message}`);
-        throw new ProviderError('network', describeNetworkError(err).message, true);
+        throw toProviderError(err);
       }
       const timeoutMs = req.timeoutMs ?? opts.defaultTimeoutMs;
       const timeoutSignal = AbortSignal.timeout(timeoutMs);
       const signal = AbortSignal.any([opts.signal, timeoutSignal]);
+      const origin = parsed.origin;
+      let method = req.method ?? 'GET';
+      let body = req.body;
+      let headers: Record<string, string> = { 'user-agent': opts.userAgent, accept: 'application/json, text/plain;q=0.8, */*;q=0.5', ...req.headers };
       let res: Response;
-      try {
-        res = (await undiciFetch(parsed.toString(), {
-          method: req.method ?? 'GET',
-          headers: { 'user-agent': opts.userAgent, accept: 'application/json, text/plain;q=0.8, */*;q=0.5', ...req.headers },
-          body: req.body,
-          signal,
-          redirect: 'follow',
-          dispatcher: dispatcher(),
-        })) as unknown as Response;
-      } catch (err) {
-        if (opts.signal.aborted) throw new ProviderError('cancelled', 'Request cancelled.');
-        if (timeoutSignal.aborted) throw new ProviderError('timeout', `Timed out after ${timeoutMs} ms.`, true);
-        const d = describeNetworkError(err);
-        throw new ProviderError('network', d.message, !d.denied);
+      // Redirects are followed manually so every hop is re-validated (scheme, port, credentials, public address)
+      // and provider credentials never leak to another origin.
+      for (let hop = 0; ; hop++) {
+        try {
+          res = (await undiciFetch(parsed.toString(), { method, headers, body, signal, redirect: 'manual', dispatcher: dispatcher() })) as unknown as Response;
+        } catch (err) {
+          if (opts.signal.aborted) throw new ProviderError('cancelled', 'Request cancelled.');
+          if (timeoutSignal.aborted) throw new ProviderError('timeout', `Timed out after ${timeoutMs} ms.`, true);
+          const d = describeNetworkError(err);
+          throw new ProviderError('network', d.message, !d.denied);
+        }
+        const location = res.status >= 300 && res.status < 400 ? res.headers.get('location') : null;
+        if (!location) break;
+        await res.body?.cancel().catch(() => undefined);
+        if (hop >= MAX_REDIRECTS) throw new ProviderError('upstream_error', `Too many redirects (more than ${MAX_REDIRECTS}).`);
+        try {
+          parsed = await validateDestination(new URL(location, parsed).toString(), strict);
+        } catch (err) {
+          throw toProviderError(err);
+        }
+        if (res.status === 303 || ((res.status === 301 || res.status === 302) && method === 'POST')) {
+          method = 'GET';
+          body = undefined;
+        }
+        if (parsed.origin !== origin) {
+          headers = Object.fromEntries(Object.entries(headers).filter(([k]) => k.toLowerCase() === 'user-agent' || CROSS_ORIGIN_SAFE_HEADERS.has(k.toLowerCase())));
+        }
       }
       const allow = new Set(req.allowStatus ?? []);
       if (!res.ok && !allow.has(res.status)) {

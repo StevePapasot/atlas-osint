@@ -59,6 +59,11 @@ export interface HttpRequestOptions {
   maxBytes?: number;
   /** Status codes that should be returned instead of thrown (e.g. 404 means "no profile"). */
   allowStatus?: number[];
+  /**
+   * The URL came from a user or a collected document rather than a fixed provider endpoint: the public-address DNS
+   * check is enforced even behind an egress proxy (fail closed), and only GET is allowed.
+   */
+  untrustedUrl?: boolean;
 }
 
 export interface HttpResponse {

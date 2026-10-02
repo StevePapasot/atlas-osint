@@ -64,8 +64,6 @@ const schema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   ATLAS_AI_MODEL: z.string().default('claude-opus-5-5'),
   ATLAS_AI_BASE_URL: z.string().default('https://api.anthropic.com'),
-  // Monitoring
-  SENTRY_DSN: z.string().optional(),
 });
 
 export type AppEnv = z.infer<typeof schema>;
@@ -133,7 +131,6 @@ export const SECRET_KEYS = [
   'INTELX_API_KEY',
   'ATLAS_DARKWEB_INDEX_TOKEN',
   'ANTHROPIC_API_KEY',
-  'SENTRY_DSN',
   'REDIS_URL',
 ] as const satisfies readonly (keyof AppEnv)[];
 

@@ -98,7 +98,7 @@ export const urlAnalysisProvider: Provider = {
   operations: [{ id: 'url_structure', label: 'URL structure', targetTypes: ['url', 'document', 'image'], module: 'domain', minDepth: 'quick' }],
   config: [],
   timeoutMs: 2000,
-  limitations: ['ATLAS does not fetch user-supplied URLs unless ATLAS_ALLOW_TARGET_FETCH is enabled.'],
+  limitations: ['Structure only. Retrieving the page itself is done by the opt-in “Target page retrieval” provider (ATLAS_ALLOW_TARGET_FETCH=true).'],
   async run(input, ctx) {
     const n = normalizeUrl(input.subject.value);
     if (!n) return { records: [] };

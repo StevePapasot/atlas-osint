@@ -13,6 +13,7 @@ import { EMAIL_PROVIDERS } from './email';
 import { CRYPTO_PROVIDERS } from './crypto';
 import { DARKWEB_PROVIDERS } from './darkweb';
 import { GEO_PROVIDERS } from './geoint';
+import { WEB_PROVIDERS } from './web';
 import { correlationProvider } from '../engine/correlation';
 
 export const ALL_PROVIDERS: Provider[] = [
@@ -27,6 +28,7 @@ export const ALL_PROVIDERS: Provider[] = [
   ...CRYPTO_PROVIDERS,
   ...DARKWEB_PROVIDERS,
   ...GEO_PROVIDERS,
+  ...WEB_PROVIDERS,
   ...LOCAL_PROVIDERS,
   ...ARTIFACT_PROVIDERS,
   ...DEMO_PROVIDERS,
