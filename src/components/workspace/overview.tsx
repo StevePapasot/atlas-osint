@@ -36,7 +36,7 @@ function ProviderRuns({ tasks }: { tasks: TaskInfo[] }) {
     return [...m.entries()].map(([provider, ts]) => {
       const count = (s: string) => ts.filter((t) => t.status === s).length;
       const status = count('running') ? 'running' : count('queued') ? 'queued' : count('failed') && !count('succeeded') ? 'failed' : count('succeeded') ? 'succeeded' : count('skipped') ? 'skipped' : 'cancelled';
-      return { provider, tasks: ts, status, ok: count('succeeded'), failed: count('failed'), skipped: count('skipped'), results: ts.reduce((s, t) => s + t.resultCount, 0) };
+      return { provider, name: ts[0]?.providerName ?? provider, tasks: ts, status, ok: count('succeeded'), failed: count('failed'), skipped: count('skipped'), results: ts.reduce((s, t) => s + t.resultCount, 0) };
     });
   }, [tasks]);
   if (!groups.length) return <p className="text-sm text-muted">No provider tasks yet. Start collection to plan and run tasks.</p>;
@@ -48,7 +48,10 @@ function ProviderRuns({ tasks }: { tasks: TaskInfo[] }) {
           <li key={g.provider}>
             <button type="button" className="flex w-full items-center gap-3 px-3 py-2.5 text-left text-sm hover:bg-surface-2/60" onClick={() => setOpen(open === g.provider ? null : g.provider)} aria-expanded={open === g.provider}>
               <S.icon className={cn('h-4 w-4 shrink-0', S.cls)} aria-label={S.label} />
-              <span className="min-w-0 flex-1 truncate font-medium text-fg">{g.provider}</span>
+              <span className="min-w-0 flex-1 truncate">
+                <span className="font-medium text-fg">{g.name}</span>
+                {g.name !== g.provider ? <span className="ml-2 hidden font-mono text-[11px] text-subtle md:inline">{g.provider}</span> : null}
+              </span>
               <span className="tabular hidden text-xs text-muted sm:inline">
                 {g.ok} ok{g.failed ? ` · ${g.failed} failed` : ''}
                 {g.skipped ? ` · ${g.skipped} unavailable` : ''}

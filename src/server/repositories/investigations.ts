@@ -10,6 +10,7 @@ import { effectiveModules } from '../engine/planner';
 import { normalizeTarget } from '@/shared/targets';
 import { DEPTHS, MODULES, TARGET_TYPES, TERMINAL_STATUSES, type Depth, type InvestigationStatus, type ModuleId, type TargetType, type EntityType } from '@/shared/domain';
 import { deleteInvestigationFiles } from '../storage/files';
+import { getProvider } from '../providers/registry';
 
 export const targetInputSchema = z.object({
   type: z.enum(TARGET_TYPES),
@@ -343,6 +344,7 @@ export async function jobProgress(investigationId: string, userId: string) {
         id: t.id,
         jobId: t.job_id,
         providerId: t.provider_id,
+        providerName: getProvider(t.provider_id)?.name ?? t.provider_id,
         operation: t.operation,
         stage: t.stage,
         status: t.status,

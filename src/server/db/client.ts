@@ -21,7 +21,7 @@ export function resolveDialect(url: string): DialectName {
 function sqlitePath(url: string): string {
   if (url === ':memory:' || url === 'file::memory:') return ':memory:';
   const p = url.replace(/^file:/i, '').replace(/^sqlite:/i, '');
-  return path.resolve(process.cwd(), p);
+  return path.resolve(/*turbopackIgnore: true*/ process.cwd(), p);
 }
 
 export function createDb(url: string): DbHolder {

@@ -39,6 +39,7 @@ export interface TaskInfo {
   id: string;
   jobId: string;
   providerId: string;
+  providerName?: string;
   operation: string;
   stage: string;
   status: string;

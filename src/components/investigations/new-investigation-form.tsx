@@ -30,6 +30,8 @@ interface Row {
   type: TargetType;
   value: string;
   touched: boolean;
+  /** Set once the analyst picks a type explicitly; auto-detection never overrides that choice. */
+  typeLocked?: boolean;
 }
 
 const DEPTH_RANK: Record<string, number> = { quick: 0, standard: 1, deep: 2 };
@@ -189,7 +191,7 @@ export function NewInvestigationForm({ prefs }: { prefs: UserPreferences }) {
               {validated.map((r, idx) => (
                 <div key={r.key} className="space-y-1">
                   <div className="flex flex-col gap-2 sm:flex-row">
-                    <Select aria-label={`Target ${idx + 1} type`} value={r.type} onChange={(e) => update(r.key, { type: e.target.value as TargetType })} className="sm:w-56">
+                    <Select aria-label={`Target ${idx + 1} type`} value={r.type} onChange={(e) => update(r.key, { type: e.target.value as TargetType, typeLocked: true })} className="sm:w-56">
                       {TARGET_TYPES.map((t) => (
                         <option key={t} value={t}>
                           {TARGET_TYPE_LABELS[t]}
@@ -203,7 +205,7 @@ export function NewInvestigationForm({ prefs }: { prefs: UserPreferences }) {
                         value={r.value}
                         onChange={(e) => update(r.key, { value: e.target.value })}
                         onBlur={() => {
-                          const detected = r.value.trim() && !r.touched ? detectTargetType(r.value) : null;
+                          const detected = r.value.trim() && !r.touched && !r.typeLocked ? detectTargetType(r.value) : null;
                           update(r.key, { touched: true, ...(detected ? { type: detected } : {}) });
                         }}
                         placeholder="e.g. j.doe@example.org, example.org, 198.51.100.23, @handle"

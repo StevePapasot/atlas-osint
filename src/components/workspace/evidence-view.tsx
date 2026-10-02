@@ -74,8 +74,8 @@ export function EvidenceView({ investigationId }: { investigationId: string }) {
                     <Badge>{e.kind}</Badge>
                     {e.isSimulated ? <SimulatedBadge /> : null}
                     <span className="text-sm font-medium text-fg">{e.title}</span>
-                    <span className="ml-auto flex items-center gap-1 font-mono text-[10px] text-subtle">
-                      <Fingerprint className="h-3 w-3" />
+                    <span className="ml-auto flex items-center gap-1 font-mono text-[10px] text-subtle" title={`SHA-256 ${e.sha256}`}>
+                      <Fingerprint className="h-3 w-3" aria-label="SHA-256" />
                       {e.sha256.slice(0, 12)}
                     </span>
                   </div>

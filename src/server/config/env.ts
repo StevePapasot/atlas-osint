@@ -92,7 +92,7 @@ export function resetEnvCache(): void {
 }
 
 export function dataDir(): string {
-  return path.resolve(process.cwd(), env().ATLAS_DATA_DIR);
+  return path.resolve(/*turbopackIgnore: true*/ process.cwd(), env().ATLAS_DATA_DIR);
 }
 
 export function isProduction(): boolean {
