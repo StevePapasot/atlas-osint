@@ -33,6 +33,39 @@ export const ALL_PROVIDERS: Provider[] = [
   correlationProvider,
 ];
 
+/**
+ * Lightweight connectivity probes for keyless providers that do not define their own health check. Each probe hits
+ * the same host the provider uses, with a non-personal subject (service metadata or a well-known organisation
+ * account), and accepts 404 so that "reachable" is what is measured — not whether a particular record exists.
+ */
+const HEALTH_PROBES: Record<string, { url: (env: AppEnv) => string; message: string }> = {
+  github: { url: () => 'https://api.github.com/users/github', message: 'GitHub REST API reachable.' },
+  reddit: { url: () => 'https://www.reddit.com/user/reddit/about.json?raw_json=1', message: 'Reddit public JSON endpoint reachable.' },
+  mastodon: {
+    url: (env) => `https://${env.ATLAS_MASTODON_INSTANCES.split(',')[0]?.trim() || 'mastodon.social'}/api/v1/instance`,
+    message: 'First configured Mastodon instance reachable.',
+  },
+  hackernews: { url: () => 'https://hacker-news.firebaseio.com/v0/maxitem.json', message: 'Hacker News Firebase API reachable.' },
+  keybase: { url: () => 'https://keybase.io/_/api/1.0/user/lookup.json?usernames=keybase&fields=basics', message: 'Keybase lookup API reachable.' },
+  bluesky: { url: () => 'https://public.api.bsky.app/xrpc/app.bsky.actor.getProfile?actor=bsky.app', message: 'Bluesky public AppView reachable.' },
+  devto: { url: () => 'https://dev.to/api/users/by_username?url=ben', message: 'DEV (Forem) API reachable.' },
+  gravatar: { url: () => 'https://api.gravatar.com/v3/profiles/00000000000000000000000000000000', message: 'Gravatar profiles API reachable.' },
+  wayback: { url: () => 'https://web.archive.org/cdx/search/cdx?url=iana.org&limit=1&output=json', message: 'Wayback Machine CDX API reachable.' },
+  'shodan.internetdb': { url: () => 'https://internetdb.shodan.io/8.8.8.8', message: 'Shodan InternetDB reachable.' },
+  blockstream: { url: () => 'https://blockstream.info/api/blocks/tip/height', message: 'Blockstream Esplora API reachable.' },
+  ipinfo: { url: () => 'https://ipinfo.io/8.8.8.8/json', message: 'IPinfo API reachable.' },
+};
+
+for (const p of ALL_PROVIDERS) {
+  const probe = HEALTH_PROBES[p.id];
+  if (!probe || p.healthCheck) continue;
+  p.healthCheck = async (ctx) => {
+    const t = Date.now();
+    await ctx.http.request(probe.url(ctx.env), { allowStatus: [404] });
+    return { status: 'healthy', message: probe.message, latencyMs: Date.now() - t };
+  };
+}
+
 const byId = new Map(ALL_PROVIDERS.map((p) => [p.id, p]));
 
 export function getProvider(id: string): Provider | undefined {

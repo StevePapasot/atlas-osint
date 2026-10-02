@@ -1,0 +1,16 @@
+node_modules
+.next
+data
+coverage
+test-results
+playwright-report
+blob-report
+.git
+.env
+.env.*
+!.env.example
+*.log
+*.db
+*.db-*
+.vscode
+.idea

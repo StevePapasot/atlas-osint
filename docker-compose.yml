@@ -1,0 +1,83 @@
+# ATLAS OSINT — PostgreSQL + Redis + separate worker.
+#
+#   cp .env.example .env    # optional: add provider API keys
+#   docker compose up --build
+#   open http://localhost:3000   (first registered account becomes admin)
+#
+# Seed the fictional demo account and investigation (optional):
+#   docker compose exec web npm run db:seed
+name: atlas-osint
+
+x-atlas-env: &atlas-env
+  DATABASE_URL: postgres://atlas:${POSTGRES_PASSWORD:-atlas-local-only}@db:5432/atlas
+  REDIS_URL: redis://redis:6379
+  ATLAS_DATA_DIR: /data
+  # Jobs run in the dedicated worker service below, not inside the web process.
+  ATLAS_INPROCESS_WORKER: "false"
+  ATLAS_APP_URL: ${ATLAS_APP_URL:-http://localhost:3000}
+  # Plain HTTP on localhost; set to "true" (or remove) behind HTTPS.
+  ATLAS_COOKIE_SECURE: ${ATLAS_COOKIE_SECURE:-false}
+
+services:
+  web:
+    build:
+      context: .
+      args:
+        NODE_IMAGE: ${NODE_IMAGE:-node:22-bookworm-slim}
+    image: atlas-osint:local
+    env_file:
+      - path: .env
+        required: false
+    environment: *atlas-env
+    ports:
+      - "${ATLAS_PORT:-3000}:3000"
+    volumes:
+      - atlas-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    restart: unless-stopped
+
+  worker:
+    image: atlas-osint:local
+    command: ["node", "node_modules/tsx/dist/cli.mjs", "--conditions=react-server", "scripts/worker.ts"]
+    env_file:
+      - path: .env
+        required: false
+    environment: *atlas-env
+    volumes:
+      - atlas-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+      web:
+        condition: service_started
+    healthcheck:
+      disable: true
+    restart: unless-stopped
+
+  db:
+    image: ${POSTGRES_IMAGE:-postgres:16-alpine}
+    environment:
+      POSTGRES_USER: atlas
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-atlas-local-only}
+      POSTGRES_DB: atlas
+    volumes:
+      - atlas-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U atlas -d atlas"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    restart: unless-stopped
+
+  redis:
+    image: ${REDIS_IMAGE:-redis:7-alpine}
+    command: ["redis-server", "--save", "", "--appendonly", "no"]
+    restart: unless-stopped
+
+volumes:
+  atlas-data:
+  atlas-pg:

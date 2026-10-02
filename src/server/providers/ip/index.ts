@@ -129,6 +129,13 @@ export const reverseDnsProvider: Provider = {
   timeoutMs: 10000,
   maxRetries: 1,
   concurrency: 6,
+  async healthCheck(ctx) {
+    const t = Date.now();
+    const names = await ctx.dns.reverse('8.8.8.8');
+    return names.length
+      ? { status: 'healthy', message: `Resolver answered PTR for 8.8.8.8 (${names[0]}).`, latencyMs: Date.now() - t }
+      : { status: 'degraded', message: 'Resolver returned no PTR record for 8.8.8.8.', latencyMs: Date.now() - t };
+  },
   async run(input, ctx) {
     const ip = input.subject.value;
     requirePublic(ip);

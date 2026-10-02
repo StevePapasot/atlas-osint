@@ -8,6 +8,7 @@ import { ensureDatabase } from '../db/ensure';
 import { rateLimit } from '../security/rate-limit';
 import { logger } from '../logging/logger';
 import { ensureWorkerStarted } from '../engine/bootstrap';
+import { env } from '../config/env';
 
 export interface HandlerArgs<P> {
   req: NextRequest;
@@ -29,10 +30,29 @@ interface BaseOptions {
 
 const UNSAFE_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
-export function clientIp(req: NextRequest): string | null {
-  const fwd = req.headers.get('x-forwarded-for');
-  if (fwd) return fwd.split(',')[0]!.trim();
-  return req.headers.get('x-real-ip');
+/**
+ * Best-effort client address for rate limiting and (hashed) audit records.
+ *
+ * Next.js sets X-Forwarded-For to the socket address only when the header is absent, so leftmost entries are
+ * client-controlled. With ATLAS_TRUSTED_PROXY_HOPS=N, the entry appended by the outermost trusted proxy (N-th from
+ * the right) is used; with 0 the rightmost entry is used. Spoofing can therefore only move a direct client between
+ * per-IP buckets — which is why sensitive endpoints also have a global backstop limit (see `wrap`).
+ */
+export function clientIp(req: Pick<NextRequest, 'headers'>, hops = trustedProxyHops()): string | null {
+  const chain = (req.headers.get('x-forwarded-for') ?? '')
+    .split(',')
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (chain.length) return chain[Math.max(0, chain.length - Math.max(1, hops))]!.slice(0, 64);
+  return req.headers.get('x-real-ip')?.trim().slice(0, 64) || null;
+}
+
+function trustedProxyHops(): number {
+  try {
+    return env().ATLAS_TRUSTED_PROXY_HOPS;
+  } catch {
+    return 0;
+  }
 }
 
 /**
@@ -126,7 +146,10 @@ function wrap<P>(
       }
       const ip = clientIp(req);
       if (opts.rateLimit) {
-        const rl = await rateLimit(`${opts.rateLimit.bucket}:${ip ?? 'unknown'}`, opts.rateLimit.limit, opts.rateLimit.windowMs);
+        const { bucket, limit, windowMs } = opts.rateLimit;
+        let rl = await rateLimit(`${bucket}:${ip ?? 'unknown'}`, limit, windowMs);
+        // Global backstop per bucket: bounds abuse even if per-IP keys are evaded with forged forwarding headers.
+        if (rl.allowed) rl = await rateLimit(`${bucket}:*`, limit * 25, windowMs);
         if (!rl.allowed) {
           return Response.json(
             { error: { code: 'rate_limited', message: 'Too many requests. Please slow down.', requestId } },
