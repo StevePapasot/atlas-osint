@@ -462,13 +462,32 @@ export async function runJob(k: Kysely<Database>, job: Row<'investigation_jobs'>
         const hasPivots = await k.selectFrom('job_tasks').select('id').where('job_id', '=', job.id).where('stage', '=', 'pivot').limit(1).execute();
         if (!hasPivots.length) {
           const targetValues = new Set(targets.map((t) => t.normalized_value));
+          // Only entities directly linked to a target are pivot candidates: results of earlier pivots are never
+          // pivoted again, so re-running an investigation stays a single bounded hop (and is idempotent).
+          const targetEntityIds = k.selectFrom('entities').select('id').where('investigation_id', '=', investigation.id).where('is_target', '=', 1);
           const discovered = await k
             .selectFrom('entities')
             .select(['id', 'type', 'value', 'display_value'])
             .where('investigation_id', '=', investigation.id)
             .where('type', 'in', ['domain', 'ip'])
             .where('is_target', '=', 0)
+            .where((eb) =>
+              eb.exists(
+                eb
+                  .selectFrom('relationships as r')
+                  .select('r.id')
+                  .where('r.investigation_id', '=', investigation.id)
+                  .where('r.status', '!=', 'rejected')
+                  .where((w) =>
+                    w.or([
+                      w.and([w('r.from_entity_id', '=', w.ref('entities.id')), w('r.to_entity_id', 'in', targetEntityIds)]),
+                      w.and([w('r.to_entity_id', '=', w.ref('entities.id')), w('r.from_entity_id', 'in', targetEntityIds)]),
+                    ]),
+                  ),
+              ),
+            )
             .orderBy('first_seen_at')
+            .orderBy('value')
             .execute();
           const pivots = planPivots(discovered.filter((d) => !targetValues.has(d.value)).map((d) => ({ id: d.id, type: d.type, value: d.value, display: d.display_value })), planInput);
           if (pivots.length) await insertTasks(k, job, pivots);

@@ -25,7 +25,7 @@ export function assertSafeUrlShape(raw: string): URL {
   }
   if (u.protocol !== 'https:' && u.protocol !== 'http:') throw new SsrfBlockedError('Only http(s) URLs may be fetched.');
   if (u.username || u.password) throw new SsrfBlockedError('URLs with embedded credentials are not fetched.');
-  if (!ALLOWED_PORTS.has(u.port)) throw new SsrfBlockedError(`Port ${u.port} is not permitted.`);
+  if (!ALLOWED_PORTS.has(u.port) && !privateEgressAllowed()) throw new SsrfBlockedError(`Port ${u.port} is not permitted.`);
   const host = u.hostname.replace(/^\[|\]$/g, '');
   if (normalizeIp(host) && !isPublicIp(host) && !privateEgressAllowed()) {
     throw new SsrfBlockedError('Requests to private, loopback or reserved addresses are blocked.');

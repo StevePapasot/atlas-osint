@@ -176,7 +176,16 @@ export async function renderPdf(s: ReportSnapshot): Promise<Buffer> {
   doc.on('data', (c: Buffer) => chunks.push(c));
   const done = new Promise<Buffer>((resolve) => doc.on('end', () => resolve(Buffer.concat(chunks))));
   const width = doc.page.width - 112;
-  const clean = (t: string | null | undefined) => (t ?? '').replace(/[^\x09\x0a\x0d\x20-\x7e -ſ–—‘’“”•…→↔]/g, '?');
+  // PDF base fonts use WinAnsi encoding: map common symbols, replace anything else that cannot be encoded.
+  const clean = (t: string | null | undefined) =>
+    (t ?? '')
+      .replace(/≥/g, '>=')
+      .replace(/≤/g, '<=')
+      .replace(/→/g, '->')
+      .replace(/←/g, '<-')
+      .replace(/↔/g, '<->')
+      .replace(/≈/g, '~')
+      .replace(/[^\x09\x0a\x0d\x20-\x7e -ÿ–—‘’“”•…]/g, '?');
 
   const h1 = (t: string) => doc.font('Helvetica-Bold').fontSize(20).fillColor(COLORS.ink).text(clean(t), { width });
   const h2 = (t: string) => {
@@ -248,7 +257,7 @@ export async function renderPdf(s: ReportSnapshot): Promise<Buffer> {
   }
   h2('10. Entity Relationships');
   if (!s.relationships.length) p('No relationships recorded.', { color: COLORS.muted });
-  s.relationships.slice(0, 150).forEach((r) => p(`• ${r.from} —${r.type}→ ${r.to} (${r.status}, ${conf(r.confidence)})`, { size: 8.5 }));
+  s.relationships.slice(0, 150).forEach((r) => p(`• ${r.from} —${r.type}-> ${r.to} (${r.status}, ${conf(r.confidence)})`, { size: 8.5 }));
   if (s.entityMatches.length) {
     doc.moveDown(0.3);
     p('Entity-resolution candidates (never merged automatically):', { bold: true, size: 9 });

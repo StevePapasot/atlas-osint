@@ -4,7 +4,7 @@
  * estimates — never the physical location of a person or device.
  */
 import ipaddr from 'ipaddr.js';
-import type { NormalizedRecord, Provider, ProviderContext } from '../types';
+import type { NormalizedRecord, Provider } from '../types';
 import { ProviderError } from '../types';
 import { makeRecord, parseSourceDate } from '../util';
 import { countryInfo } from '../../geo/gazetteer';

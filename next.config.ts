@@ -14,6 +14,8 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // Do not auto-generate AGENTS.md / CLAUDE.md in the repository during `next dev`.
+  agentRules: false,
   reactStrictMode: true,
   // Native / filesystem-heavy server packages must not be bundled.
   serverExternalPackages: [
@@ -27,6 +29,7 @@ const nextConfig: NextConfig = {
     'unpdf',
     'mammoth',
     'ioredis',
+    'exifr',
   ],
   async headers() {
     return [

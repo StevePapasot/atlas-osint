@@ -8,7 +8,7 @@ import type { Database } from '../db/schema';
 import { ApiError, conflict, notFound } from '../api/errors';
 import { recomputeFindingConfidence } from '../engine/persist';
 import { getProvider } from '../providers/registry';
-import { CONFIDENCE_LEVELS, VERIFICATION_STATUSES, RELATIONSHIP_TYPES, ENTITY_TYPES, EVIDENCE_CATEGORIES, CLAIM_TYPES } from '@/shared/domain';
+import { CONFIDENCE_LEVELS, VERIFICATION_STATUSES, ENTITY_TYPES, EVIDENCE_CATEGORIES, CLAIM_TYPES } from '@/shared/domain';
 
 // ------------------------------------------------------------------------------------------------ findings
 
@@ -228,7 +228,7 @@ export const reviewSchema = z.object({
 export async function reviewFinding(investigationId: string, findingId: string, userId: string, input: z.infer<typeof reviewSchema>) {
   const f = await ownedFinding(investigationId, findingId);
   if (input.status !== 'unreviewed' && (!input.rationale || input.rationale.length < 10)) {
-    throw new ApiError(400, 'rationale_required', 'Explain the evidence behind this decision (at least 10 characters). Verification means the claim was checked against adequate evidence.');
+    throw new ApiError(400, 'rationale_required', 'A rationale is required: explain the evidence behind this decision (at least 10 characters). Verification means the claim was checked against adequate evidence.');
   }
   if (f.verification_status === input.status) return { unchanged: true };
   await db().transaction().execute(async (tx) => {

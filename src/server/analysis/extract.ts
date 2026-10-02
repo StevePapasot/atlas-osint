@@ -77,7 +77,7 @@ export function extractEntities(text: string, opts: { defaultCountry?: string } 
   const clean = (arr: string[]) =>
     uniq(
       arr
-        .map((s) => s.replace(/[^\p{L}\p{N}&.'’ -]/gu, '').replace(/\s+/g, ' ').trim())
+        .map((s) => s.replace(/[^\p{L}\p{N}&.'’ -]/gu, '').replace(/\s+/g, ' ').replace(/[.'’-]+$/, '').trim())
         .filter((s) => s.length >= 3 && s.length <= 80 && /\p{Lu}/u.test(s)),
       30,
     );
