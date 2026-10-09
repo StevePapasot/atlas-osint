@@ -36,7 +36,7 @@ jobs:
       publish: ${{ steps.plan.outputs.publish }}
       prerelease: ${{ steps.plan.outputs.prerelease }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ github.event.workflow_run.head_sha || github.sha }}
       - id: plan
@@ -83,7 +83,7 @@ jobs:
     if: needs.plan.outputs.publish == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.sha }}
       - name: Image name (registry names must be lowercase)
@@ -124,7 +124,7 @@ jobs:
     if: needs.plan.outputs.publish == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.plan.outputs.sha }}
       - name: Release notes from CHANGELOG.md
