@@ -10,6 +10,8 @@ All notable changes to ATLAS OSINT are documented here. The format follows
 
 - Command-line scripts (`providers:check`, `worker`, `db:migrate`, `db:seed`) now read `.env` like the web app, so
   API keys in `.env` are used everywhere.
+- A `.env` copied from `.env.example` no longer breaks the Docker image when passed with `--env-file`: the example
+  no longer sets `DATABASE_URL` / `ATLAS_DATA_DIR`, which overrode the image's `/data` paths.
 
 ### Changed
 
