@@ -72,14 +72,30 @@ export type AppEnv = z.infer<typeof schema>;
 
 let cached: AppEnv | null = null;
 
-export function env(): AppEnv {
-  if (cached) return cached;
+/** Every variable the configuration schema reads. */
+export const ENV_KEYS = Object.keys(schema.shape) as (keyof AppEnv)[];
+
+function parseEnv(source: Record<string, string | undefined>) {
   const raw: Record<string, string | undefined> = {};
-  for (const key of Object.keys(schema.shape)) {
-    const v = process.env[key];
+  for (const key of ENV_KEYS) {
+    const v = source[key];
     raw[key] = v === '' ? undefined : v;
   }
-  const parsed = schema.safeParse(raw);
+  return schema.safeParse(raw);
+}
+
+/**
+ * Validate configuration values without loading them (used by `npm run env:check`). Returns the variables whose
+ * values the app would refuse, with the reason; messages never contain the values themselves.
+ */
+export function validateEnvValues(source: Record<string, string | undefined>): Array<{ key: string; message: string }> {
+  const parsed = parseEnv(source);
+  return parsed.success ? [] : parsed.error.issues.map((i) => ({ key: i.path.join('.'), message: i.message }));
+}
+
+export function env(): AppEnv {
+  if (cached) return cached;
+  const parsed = parseEnv(process.env);
   if (!parsed.success) {
     const issues = parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ');
     throw new Error(`Invalid ATLAS configuration: ${issues}`);

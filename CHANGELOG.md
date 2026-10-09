@@ -6,6 +6,12 @@ All notable changes to ATLAS OSINT are documented here. The format follows
 
 ## [Unreleased]
 
+### Added
+
+- `npm run env:check` checks `.env` before you start ATLAS: quotes and spaces that Docker's `--env-file` would keep,
+  placeholders, keys pasted into the wrong line, misspelled names, duplicates, UTF-16 files and values the app would
+  refuse. It never prints values, so its output is safe to share.
+
 ### Fixed
 
 - Command-line scripts (`providers:check`, `worker`, `db:migrate`, `db:seed`) now read `.env` like the web app, so

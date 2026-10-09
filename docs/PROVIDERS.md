@@ -12,7 +12,8 @@ Kinds:
 - **simulated** — demo data only. Planned only in demo-mode investigations, labelled SIMULATED everywhere, never
   mixed into live investigations.
 
-Run `npm run providers:check` for the configuration status of every provider, and `npm run providers:check -- --live`
+Run `npm run env:check` to check `.env` for formatting mistakes (it never prints values), `npm run providers:check` for
+the configuration status of every provider, and `npm run providers:check -- --live`
 to run real connectivity checks from your network. **Settings → Search providers** shows the same information in the
 UI (key presence only — values are never sent to the browser), lets each user disable providers, and runs health
 checks on demand.

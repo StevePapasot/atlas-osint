@@ -29,6 +29,7 @@
     "test:watch": "vitest",
     "test:e2e": "playwright test",
     "providers:check": "tsx --conditions=react-server scripts/providers-check.ts",
+    "env:check": "tsx --conditions=react-server scripts/env-check.ts",
     "doctor": "node scripts/doctor.mjs --full"
   },
   "dependencies": {

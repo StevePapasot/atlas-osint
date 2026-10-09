@@ -321,9 +321,13 @@ function ApiStatus({ data }: { data: SettingsData }) {
           <p className="mt-1">
             Keys are set on the server, not in this page, so they never pass through a browser. In the ATLAS folder, copy{' '}
             <code className="font-mono text-xs">.env.example</code> to <code className="font-mono text-xs">.env</code>, put your keys after the
-            matching names (for example <code className="font-mono text-xs">SHODAN_API_KEY=…</code>), save, and restart ATLAS (stop{' '}
-            <code className="font-mono text-xs">npm run dev</code> with Ctrl+C and start it again; with Docker, pass the file with{' '}
-            <code className="font-mono text-xs">--env-file .env</code>). Keys are optional — many sources work without one.
+            matching names (for example <code className="font-mono text-xs">SHODAN_API_KEY=…</code>, without quotes or spaces), save, and
+            restart ATLAS (stop <code className="font-mono text-xs">npm run dev</code> with Ctrl+C and start it again; with Docker, pass the
+            file with <code className="font-mono text-xs">--env-file .env</code>). Keys are optional — many sources work without one.
+          </p>
+          <p className="mt-1">
+            To check the file for mistakes, run <code className="font-mono text-xs">npm run env:check</code> in the ATLAS folder (it never
+            prints the keys).
           </p>
         </div>
         <ul className="grid gap-1.5 text-sm sm:grid-cols-2">

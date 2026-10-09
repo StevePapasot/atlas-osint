@@ -105,8 +105,10 @@ database driver works, and says what to do. It also runs automatically before `n
 ## Configuration
 
 All configuration is via environment variables; [.env.example](.env.example) documents every one. Nothing is
-required for local use. Provider API keys unlock additional sources; **Settings → Search providers** and
-`npm run providers:check -- --live` show which sources are configured and actually reachable from your network.
+required for local use. Provider API keys unlock additional sources: copy `.env.example` to `.env`, put each key
+after its name (`SHODAN_API_KEY=…`, no quotes or spaces) and restart ATLAS (with Docker: `--env-file .env`).
+`npm run env:check` finds mistakes in the file without printing any value; **Settings → Search providers** and
+`npm run providers:check -- --live` then show which sources are configured and actually reachable from your network.
 Key values are never sent to the browser.
 
 ## Scripts
@@ -120,6 +122,7 @@ Key values are never sent to the browser.
 | `npm run db:seed` | Create the demo account and a sample (simulated) investigation |
 | `npm run setup` | Migrate + seed |
 | `npm run doctor` | Check Node.js version, installed files and the database driver |
+| `npm run env:check [-- file]` | Check `.env` for mistakes (quotes, spaces, typos, placeholders, keys in the wrong line); never prints values |
 | `npm run providers:check [-- --live] [-- --json]` | Provider configuration report; `--live` runs real connectivity checks |
 | `npm run lint` / `npm run typecheck` | ESLint / TypeScript |
 | `npm test` | Unit + integration tests (Vitest; SQLite, or PostgreSQL with `TEST_DATABASE_URL`) |
@@ -155,7 +158,7 @@ src/
     repositories/      data access with ownership checks
     security/          SSRF guard, rate limiting, redaction, hashing
   shared/              domain constants and target validation shared with the browser
-scripts/               migrate, seed, worker, providers:check, e2e server
+scripts/               migrate, seed, worker, env:check, providers:check, e2e server
 supabase/rls.sql       optional hardening for Supabase-hosted PostgreSQL
 tests/                 unit, integration (API, engine, migrations, RLS) and e2e suites
 ```
