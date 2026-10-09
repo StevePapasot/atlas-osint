@@ -78,14 +78,15 @@ the suite against an already running deployment: `E2E_BASE_URL=http://host:port 
 
 ## Releasing
 
-Releases are cut from `main` once CI is green:
+Releases are automatic. To release version X.Y.Z:
 
 1. Move the `[Unreleased]` entries in `CHANGELOG.md` under a new `## [X.Y.Z] — <date>` heading and update the
    comparison links at the bottom.
 2. Set the same version in `package.json` (and the root `version` fields in `package-lock.json`).
-3. Commit, then tag and push: `git tag vX.Y.Z && git push origin main vX.Y.Z`.
+3. Merge or push the change to `main`.
 
-The **Release** workflow checks that the tag matches `package.json`, publishes `ghcr.io/<owner>/atlas-osint` as
-`X.Y.Z`, `X.Y` and `latest` for linux/amd64 and linux/arm64, and creates a GitHub release from the changelog
-section. Run the workflow manually (Actions → Release → Run workflow) for a dry run that builds both images without
-publishing anything.
+When CI passes on that commit, the **Release** workflow sees that `vX.Y.Z` does not exist yet, publishes
+`ghcr.io/<owner>/atlas-osint` as `X.Y.Z`, `X.Y` and `latest` for linux/amd64 and linux/arm64, then creates the
+`vX.Y.Z` tag and a GitHub release from the changelog section. Versions with a suffix (`1.0.0-rc.1`) are published as
+pre-releases and do not move `latest`. Pushing a `vX.Y.Z` tag yourself also triggers a release. Running the workflow
+manually (Actions → Release → Run workflow) builds both images without publishing anything.

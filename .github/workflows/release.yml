@@ -1,10 +1,15 @@
 name: Release
 
-# Pushing a tag such as v0.1.0 publishes ghcr.io/<owner>/atlas-osint:{0.1.0,0.1,latest} for linux/amd64 and
-# linux/arm64 and creates a GitHub release with the notes from CHANGELOG.md.
-# Running it manually builds the images without publishing anything (a dry run).
+# Releases are automatic: when CI passes on main and package.json holds a version that has no vX.Y.Z tag yet, this
+# workflow publishes ghcr.io/<owner>/atlas-osint as X.Y.Z, X.Y and latest (linux/amd64 + linux/arm64), then creates
+# the vX.Y.Z tag and a GitHub release with the notes from CHANGELOG.md.
+# Pushing a vX.Y.Z tag yourself does the same. Running the workflow manually builds the images without publishing.
 
 on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
   push:
     tags: ['v*.*.*']
   workflow_dispatch:
@@ -13,26 +18,80 @@ permissions:
   contents: write
   packages: write
 
+concurrency:
+  group: release
+  cancel-in-progress: false
+
 jobs:
+  plan:
+    name: Decide what to release
+    # Only after a green CI run (or a tag push / manual run).
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    outputs:
+      sha: ${{ steps.plan.outputs.sha }}
+      version: ${{ steps.plan.outputs.version }}
+      minor: ${{ steps.plan.outputs.minor }}
+      tag: ${{ steps.plan.outputs.tag }}
+      publish: ${{ steps.plan.outputs.publish }}
+      prerelease: ${{ steps.plan.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - id: plan
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          version="$(node -p "require('./package.json').version")"
+          tag="v$version"
+          publish=false
+          case "$EVENT" in
+            push)
+              if [ "$GITHUB_REF_NAME" != "$tag" ]; then
+                echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
+                exit 1
+              fi
+              publish=true
+              ;;
+            workflow_run)
+              if git ls-remote --exit-code --tags origin "refs/tags/$tag" > /dev/null; then
+                echo "$tag is already released; nothing to publish."
+              else
+                publish=true
+              fi
+              ;;
+            *)
+              echo "Manual run: building images without publishing."
+              ;;
+          esac
+          prerelease=false
+          case "$version" in *-*) prerelease=true ;; esac
+          {
+            echo "sha=$(git rev-parse HEAD)"
+            echo "version=$version"
+            echo "minor=${version%.*}"
+            echo "tag=$tag"
+            echo "publish=$publish"
+            echo "prerelease=$prerelease"
+          } >> "$GITHUB_OUTPUT"
+          echo "version=$version tag=$tag publish=$publish prerelease=$prerelease"
+
   image:
     name: Multi-platform Docker image
+    needs: plan
+    if: needs.plan.outputs.publish == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
       - name: Image name (registry names must be lowercase)
         run: echo "IMAGE=ghcr.io/${GITHUB_REPOSITORY,,}" >> "$GITHUB_ENV"
-      - name: Check the tag matches package.json
-        if: github.event_name == 'push'
-        run: |
-          version="$(node -p "require('./package.json').version")"
-          if [ "v$version" != "$GITHUB_REF_NAME" ]; then
-            echo "::error::Tag $GITHUB_REF_NAME does not match package.json version $version"
-            exit 1
-          fi
       - uses: docker/setup-qemu-action@v3
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
-        if: github.event_name == 'push'
+        if: needs.plan.outputs.publish == 'true'
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
@@ -42,46 +101,66 @@ jobs:
         with:
           images: ${{ env.IMAGE }}
           tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=raw,value=latest,enable=${{ github.event_name == 'push' && !contains(github.ref_name, '-') }}
-            type=sha,enable=${{ github.event_name != 'push' }}
+            type=raw,value=${{ needs.plan.outputs.version }},enable=${{ needs.plan.outputs.publish == 'true' }}
+            type=raw,value=${{ needs.plan.outputs.minor }},enable=${{ needs.plan.outputs.publish == 'true' && needs.plan.outputs.prerelease == 'false' }}
+            type=raw,value=latest,enable=${{ needs.plan.outputs.publish == 'true' && needs.plan.outputs.prerelease == 'false' }}
+            type=sha,enable=${{ needs.plan.outputs.publish != 'true' }}
+          labels: |
+            org.opencontainers.image.version=${{ needs.plan.outputs.version }}
+            org.opencontainers.image.licenses=AGPL-3.0-only
       - uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64
-          push: ${{ github.event_name == 'push' }}
+          push: ${{ needs.plan.outputs.publish == 'true' }}
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
   github-release:
-    name: GitHub release
-    needs: image
-    if: github.event_name == 'push'
+    name: Tag and GitHub release
+    needs: [plan, image]
+    if: needs.plan.outputs.publish == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.plan.outputs.sha }}
       - name: Release notes from CHANGELOG.md
+        env:
+          VERSION: ${{ needs.plan.outputs.version }}
         run: |
-          version="${GITHUB_REF_NAME#v}"
-          awk -v v="$version" '
-            $0 ~ "^## \\[" v "\\]" { on = 1; next }
+          awk -v v="$VERSION" '
+            index($0, "## [" v "]") == 1 { on = 1; next }
             on && /^## \[/ { exit }
+            on && /^\[[^]]+\]: / { exit }
             on { print }
           ' CHANGELOG.md > notes.md
-          image="ghcr.io/${GITHUB_REPOSITORY,,}:$version"
+          if ! grep -q '[^[:space:]]' notes.md; then
+            echo "::error::CHANGELOG.md has no section for $VERSION"
+            exit 1
+          fi
+          image="ghcr.io/${GITHUB_REPOSITORY,,}:$VERSION"
           {
             echo
             echo "### Run it"
             echo
             echo '```bash'
-            echo "docker run -d -p 3000:3000 -v atlas-data:/data -e ATLAS_COOKIE_SECURE=false $image"
+            echo "docker run -d --name atlas -p 3000:3000 -v atlas-data:/data -e ATLAS_COOKIE_SECURE=false $image"
             echo '```'
+            echo
+            echo "Then open http://localhost:3000. Images: linux/amd64 and linux/arm64."
           } >> notes.md
           cat notes.md
-      - name: Create release
+      - name: Create tag and release
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" --title "ATLAS OSINT $GITHUB_REF_NAME" --notes-file notes.md --verify-tag
+          TAG: ${{ needs.plan.outputs.tag }}
+          SHA: ${{ needs.plan.outputs.sha }}
+          PRERELEASE: ${{ needs.plan.outputs.prerelease }}
+        run: |
+          flags=()
+          if [ "$PRERELEASE" = "true" ]; then flags+=(--prerelease); fi
+          # Creates the tag at the released commit when it does not exist yet (automatic releases from main).
+          gh release create "$TAG" --target "$SHA" --title "ATLAS OSINT $TAG" --notes-file notes.md "${flags[@]}"
