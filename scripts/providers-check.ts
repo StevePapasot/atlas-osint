@@ -48,7 +48,8 @@ async function main() {
     console.log(`${pad('provider', 26)} ${pad('kind', 10)} ${pad('configuration', 30)} ${live ? pad('health', 14) + ' message' : ''}`);
     console.log('-'.repeat(live ? 140 : 70));
     for (const r of rows) {
-      console.log(`${pad(r.id, 26)} ${pad(r.kind, 10)} ${pad(r.config, 30)} ${live ? pad(r.health ?? (r.usable ? 'n/a' : '—'), 14) + ' ' + String(r.message ?? '').slice(0, 90) : ''}`);
+      // Messages are printed in full: the end of an error often says why a service refused a key.
+      console.log(`${pad(r.id, 26)} ${pad(r.kind, 10)} ${pad(r.config, 30)} ${live ? pad(r.health ?? (r.usable ? 'n/a' : '—'), 14) + ' ' + String(r.message ?? '') : ''}`);
     }
     if (!live) console.log('\nRun with --live to perform real connectivity checks for configured live providers.');
   }

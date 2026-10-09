@@ -3,6 +3,7 @@
  * Search results are UNVERIFIED LEADS: a page matching a query is not evidence that it concerns the target.
  */
 import type { NormalizedRecord, Provider, ProviderContext, ProviderInput } from '../types';
+import { ProviderError } from '../types';
 import { makeRecord, parseSourceDate, stripTags, truncate } from '../util';
 import { canonicalUrlKey, normalizeUrl } from '@/shared/targets';
 import type { EntityType, TargetType } from '@/shared/domain';
@@ -77,6 +78,22 @@ export function hitsToRecords(provider: Provider, ctx: ProviderContext, input: P
 
 const searchOp = { id: 'web_search', label: 'Planned web search', targetTypes: ALL_SEARCHABLE, module: 'web_search' as const, minDepth: 'quick' as const };
 
+/** Brave answers an unknown or inactive key with HTTP 422 `SUBSCRIPTION_TOKEN_INVALID` rather than 401. */
+async function braveRequest(ctx: ProviderContext, url: string) {
+  try {
+    return await ctx.http.request(url, { headers: { 'X-Subscription-Token': ctx.env.BRAVE_SEARCH_API_KEY!, accept: 'application/json' } });
+  } catch (err) {
+    if (err instanceof ProviderError && err.message.includes('SUBSCRIPTION_TOKEN_INVALID')) {
+      throw new ProviderError(
+        'auth',
+        'Brave did not accept the API key (SUBSCRIPTION_TOKEN_INVALID). Copy it again from the Brave dashboard (API keys), ' +
+          'paste it after BRAVE_SEARCH_API_KEY= in .env and restart ATLAS; also check that the subscription is active.',
+      );
+    }
+    throw err;
+  }
+}
+
 export const braveSearchProvider: Provider = {
   id: 'brave',
   name: 'Brave Search API',
@@ -95,7 +112,7 @@ export const braveSearchProvider: Provider = {
   async run(input, ctx) {
     const query = String(input.params.query ?? input.subject.display);
     const url = `https://api.search.brave.com/res/v1/web/search?q=${encodeURIComponent(query)}&count=10&safesearch=moderate&text_decorations=false`;
-    const res = await ctx.http.request(url, { headers: { 'X-Subscription-Token': ctx.env.BRAVE_SEARCH_API_KEY!, accept: 'application/json' } });
+    const res = await braveRequest(ctx, url);
     const data = res.json<{ web?: { results?: Array<{ url: string; title: string; description?: string; page_age?: string; age?: string; extra_snippets?: string[] }> } }>();
     const hits: SearchHit[] = (data.web?.results ?? []).map((r, i) => ({
       url: r.url,
@@ -108,8 +125,8 @@ export const braveSearchProvider: Provider = {
   },
   async healthCheck(ctx) {
     const t = Date.now();
-    await ctx.http.request('https://api.search.brave.com/res/v1/web/search?q=iana&count=1', { headers: { 'X-Subscription-Token': ctx.env.BRAVE_SEARCH_API_KEY! } });
-    return { status: 'healthy', message: 'Brave Search API accepted the key.', latencyMs: Date.now() - t };
+    await braveRequest(ctx, 'https://api.search.brave.com/res/v1/web/search?q=iana&count=1');
+    return { status: 'healthy', message: 'Brave Search API accepted the key (one search used).', latencyMs: Date.now() - t };
   },
 };
 
@@ -152,7 +169,27 @@ export const serpApiProvider: Provider = {
     const hits: SearchHit[] = (data.organic_results ?? []).map((r) => ({ url: r.link, title: r.title, snippet: r.snippet ?? '', published: r.date ?? null, rank: r.position }));
     return { records: hitsToRecords(this, ctx, input, hits) };
   },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    // The Account API is free: it does not count toward the search quota. Only counts are reported, never account details.
+    const res = await ctx.http.request(`https://serpapi.com/account.json?api_key=${encodeURIComponent(ctx.env.SERPAPI_API_KEY!)}`);
+    const a = res.json<{ plan_searches_left?: number; total_searches_left?: number }>();
+    const left = a.total_searches_left ?? a.plan_searches_left;
+    return {
+      status: left === 0 ? 'degraded' : 'healthy',
+      message: left === undefined ? 'SerpApi accepted the key.' : `SerpApi accepted the key: ${left} search(es) left.`,
+      latencyMs: Date.now() - t,
+    };
+  },
 };
+
+function parallelSearch(ctx: ProviderContext, body: Record<string, unknown>) {
+  return ctx.http.request('https://api.parallel.ai/v1beta/search', {
+    method: 'POST',
+    headers: { 'x-api-key': ctx.env.PARALLEL_API_KEY!, 'content-type': 'application/json', 'parallel-beta': 'search-extract-2025-10-10' },
+    body: JSON.stringify(body),
+  });
+}
 
 export const parallelSearchProvider: Provider = {
   id: 'parallel',
@@ -171,11 +208,7 @@ export const parallelSearchProvider: Provider = {
   async run(input, ctx) {
     const query = String(input.params.query ?? input.subject.display);
     const objective = `Find public web pages that reference ${input.subject.display} (${input.subject.type}). Return pages that literally contain the identifier.`;
-    const res = await ctx.http.request('https://api.parallel.ai/v1beta/search', {
-      method: 'POST',
-      headers: { 'x-api-key': ctx.env.PARALLEL_API_KEY!, 'content-type': 'application/json', 'parallel-beta': 'search-extract-2025-10-10' },
-      body: JSON.stringify({ objective, search_queries: [query.slice(0, 200)], max_results: 10, excerpts: { max_chars_per_result: 1200 } }),
-    });
+    const res = await parallelSearch(ctx, { objective, search_queries: [query.slice(0, 200)], max_results: 10, excerpts: { max_chars_per_result: 1200 } });
     const data = res.json<{ results?: Array<{ url: string; title?: string; publish_date?: string | null; excerpts?: string[] }> }>();
     const hits: SearchHit[] = (data.results ?? []).map((r, i) => ({
       url: r.url,
@@ -185,6 +218,11 @@ export const parallelSearchProvider: Provider = {
       rank: i + 1,
     }));
     return { records: hitsToRecords(this, ctx, input, hits) };
+  },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    await parallelSearch(ctx, { objective: 'IANA home page', search_queries: ['iana.org'], max_results: 1, excerpts: { max_chars_per_result: 200 } });
+    return { status: 'healthy', message: 'Parallel accepted the key (one search request used).', latencyMs: Date.now() - t };
   },
 };
 

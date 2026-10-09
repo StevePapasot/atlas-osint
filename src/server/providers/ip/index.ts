@@ -134,7 +134,13 @@ export const reverseDnsProvider: Provider = {
     const names = await ctx.dns.reverse('8.8.8.8');
     return names.length
       ? { status: 'healthy', message: `Resolver answered PTR for 8.8.8.8 (${names[0]}).`, latencyMs: Date.now() - t }
-      : { status: 'degraded', message: 'Resolver returned no PTR record for 8.8.8.8.', latencyMs: Date.now() - t };
+      : {
+          status: 'degraded',
+          message: ctx.env.ATLAS_DNS_SERVERS
+            ? 'The configured resolvers returned no PTR record for 8.8.8.8.'
+            : 'The system resolver returned no PTR record for 8.8.8.8 (common with Docker Desktop); set ATLAS_DNS_SERVERS=1.1.1.1,9.9.9.9.',
+          latencyMs: Date.now() - t,
+        };
   },
   async run(input, ctx) {
     const ip = input.subject.value;
@@ -310,7 +316,19 @@ export const shodanProvider: Provider = {
       ],
     };
   },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    // API plan information: free, uses no query credits.
+    const res = await ctx.http.request(`https://api.shodan.io/api-info?key=${encodeURIComponent(ctx.env.SHODAN_API_KEY!)}`);
+    const info = res.json<{ plan?: string; query_credits?: number }>();
+    return {
+      status: 'healthy',
+      message: `Shodan accepted the key${info.plan ? ` (plan ${info.plan}, ${info.query_credits ?? 0} query credit(s))` : ''}.`,
+      latencyMs: Date.now() - t,
+    };
+  },
 };
+
 
 export const ipinfoProvider: Provider = {
   id: 'ipinfo',
@@ -363,6 +381,16 @@ export const ipinfoProvider: Provider = {
       ],
     };
   },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    const token = ctx.env.IPINFO_TOKEN;
+    await ctx.http.request('https://ipinfo.io/8.8.8.8/json', { headers: token ? { authorization: `Bearer ${token}` } : {} });
+    return {
+      status: 'healthy',
+      message: token ? 'IPinfo accepted the token.' : 'IPinfo reachable without a token (low free limit; IPINFO_TOKEN raises it).',
+      latencyMs: Date.now() - t,
+    };
+  },
 };
 
 export const abuseIpDbProvider: Provider = {
@@ -408,6 +436,14 @@ export const abuseIpDbProvider: Provider = {
         }),
       ],
     };
+  },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    const res = await ctx.http.request('https://api.abuseipdb.com/api/v2/check?ipAddress=8.8.8.8&maxAgeInDays=1', {
+      headers: { key: ctx.env.ABUSEIPDB_API_KEY!, accept: 'application/json' },
+    });
+    const left = res.headers.get('x-ratelimit-remaining');
+    return { status: 'healthy', message: `AbuseIPDB accepted the key${left ? `: ${left} check(s) left today` : ''}.`, latencyMs: Date.now() - t };
   },
 };
 
@@ -485,6 +521,11 @@ export const virusTotalProvider: Provider = {
         }),
       ],
     };
+  },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    await ctx.http.request('https://www.virustotal.com/api/v3/ip_addresses/8.8.8.8', { headers: { 'x-apikey': ctx.env.VIRUSTOTAL_API_KEY! } });
+    return { status: 'healthy', message: 'VirusTotal accepted the key (one of the daily lookups used).', latencyMs: Date.now() - t };
   },
 };
 

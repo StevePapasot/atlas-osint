@@ -46,13 +46,15 @@ export async function checkProviderHealth(providerId: string) {
     return r;
   }
   if (!p.healthCheck) return { status: 'unknown', message: 'This provider has no health check; it is exercised during investigations.', latencyMs: null };
-  const signal = AbortSignal.timeout(20_000);
+  // Slow providers (crt.sh: 30 s) get their own timeout plus a margin, so their own message explains a timeout.
+  const timeoutMs = Math.min(45_000, Math.max(20_000, (p.timeoutMs ?? 0) + 5_000));
+  const signal = AbortSignal.timeout(timeoutMs);
   const started = Date.now();
   try {
     const res = await p.healthCheck({
       signal,
       env: e,
-      timeoutMs: 20_000,
+      timeoutMs,
       http: createHttpClient({ signal, userAgent: e.ATLAS_HTTP_USER_AGENT, defaultTimeoutMs: 20_000 }),
       dns: createDnsClient({ servers: e.ATLAS_DNS_SERVERS?.split(',').map((s) => s.trim()).filter(Boolean), signal }),
       now: () => new Date(),

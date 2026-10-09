@@ -41,8 +41,6 @@ export const ALL_PROVIDERS: Provider[] = [
  * account), and accepts 404 so that "reachable" is what is measured — not whether a particular record exists.
  */
 const HEALTH_PROBES: Record<string, { url: (env: AppEnv) => string; message: string }> = {
-  github: { url: () => 'https://api.github.com/users/github', message: 'GitHub REST API reachable.' },
-  reddit: { url: () => 'https://www.reddit.com/user/reddit/about.json?raw_json=1', message: 'Reddit public JSON endpoint reachable.' },
   mastodon: {
     url: (env) => `https://${env.ATLAS_MASTODON_INSTANCES.split(',')[0]?.trim() || 'mastodon.social'}/api/v1/instance`,
     message: 'First configured Mastodon instance reachable.',
@@ -55,7 +53,6 @@ const HEALTH_PROBES: Record<string, { url: (env: AppEnv) => string; message: str
   wayback: { url: () => 'https://web.archive.org/cdx/search/cdx?url=iana.org&limit=1&output=json', message: 'Wayback Machine CDX API reachable.' },
   'shodan.internetdb': { url: () => 'https://internetdb.shodan.io/8.8.8.8', message: 'Shodan InternetDB reachable.' },
   blockstream: { url: () => 'https://blockstream.info/api/blocks/tip/height', message: 'Blockstream Esplora API reachable.' },
-  ipinfo: { url: () => 'https://ipinfo.io/8.8.8.8/json', message: 'IPinfo API reachable.' },
 };
 
 for (const p of ALL_PROVIDERS) {

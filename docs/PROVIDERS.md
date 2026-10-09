@@ -18,6 +18,19 @@ to run real connectivity checks from your network. **Settings → Search provide
 UI (key presence only — values are never sent to the browser), lets each user disable providers, and runs health
 checks on demand.
 
+Every provider that needs a key has a health check that proves the service accepts it. When a service refuses a
+request, the message includes the service's own error code and text (for example Brave's `SUBSCRIPTION_TOKEN_INVALID`),
+with keys and personal data removed. Most checks are free; these use a little quota each time they run:
+
+| Provider | Health check | Cost |
+| --- | --- | --- |
+| `brave` | one web search for `iana` | one search |
+| `parallel` | one search with one result | one search request |
+| `virustotal` | lookup of 8.8.8.8 | one of the daily lookups |
+| `abuseipdb` | check of 8.8.8.8 (reports the checks left today) | one of the daily checks |
+| `youtube` | list of interface languages | one quota unit |
+| `serpapi`, `shodan`, `hibp`, `intelx`, `etherscan`, `github`, `ipinfo` | account, plan or rate-limit information | free |
+
 ## Verification status
 
 "Live-verified" means the adapter was exercised against the real service during development. Most other adapters are
@@ -30,8 +43,15 @@ confirm them in your environment.
 | Status | Providers |
 | --- | --- |
 | Live-verified | `dns` (A/AAAA/MX/NS/TXT/CAA/SOA, mail policy), `dns.ptr`, `cymru`, `gitlab`, `npm`, `url.fetch`, all `local.*` analysers |
-| Fixture-tested, not live-verified (host blocked or key unavailable in the build environment) | `brave`, `serpapi`, `parallel`, `github`, `mastodon`, `keybase`, `hackernews`, `hibp`, `gravatar`, `rdap`, `crtsh`, `wayback`, `shodan.internetdb`, `ipinfo`, `abuseipdb`, `virustotal`, `blockstream`, `intelx` |
-| Implemented, no fixture test yet | `reddit`, `youtube`, `bluesky`, `devto`, `shodan`, `etherscan`, `ahmia`, `darkweb.custom`, `nominatim` |
+| Health check passed on a user's network (9 October 2026, Docker Desktop on Windows): the endpoint answered, results not yet confirmed in an investigation | `github`, `mastodon`, `hackernews`, `keybase`, `bluesky`, `devto`, `gravatar`, `rdap`, `wayback`, `shodan.internetdb`, `ipinfo`, `blockstream` |
+| Fixture-tested, not live-verified (host blocked or key unavailable in the build environment) | `brave`, `serpapi`, `parallel`, `hibp`, `crtsh`, `abuseipdb`, `virustotal`, `intelx` |
+| Implemented, no fixture test of results yet | `youtube`, `bluesky`, `devto`, `shodan`, `etherscan`, `ahmia`, `darkweb.custom`, `nominatim` |
+| Known not to work without credentials | `reddit` — Reddit has refused unauthenticated requests to its JSON endpoints since 2026 (HTTP 403 on the same user network); opt-in with `ATLAS_ENABLE_REDDIT=true` |
+
+Observed in that first user check and not yet resolved: `brave` answered HTTP 422 (0.1.1 shows Brave's error code, which
+tells an invalid key from a request problem); `crtsh` did not answer within 20 s (crt.sh is often overloaded; the check
+now waits 30 s like investigations); `dns.ptr` got no PTR answer from Docker Desktop's resolver (set
+`ATLAS_DNS_SERVERS`).
 | Simulated (demo) | `demo.search`, `demo.search-alt`, `demo.profiles`, `demo.infrastructure`, `demo.ipintel`, `demo.breach`, `demo.darkweb`, `demo.unstable` (always fails, to exercise partial completion) |
 
 ## Catalogue
@@ -56,7 +76,7 @@ query on each task.
 | `github` | GitHub REST API | optional `GITHUB_TOKEN_OSINT` (higher limits; required for email search) | profile (≥ quick), users with that public email (≥ standard) |
 | `gitlab` | GitLab.com users API | — | profile (≥ quick); unauthenticated API exposes name/state/avatar only |
 | `npm` | npm registry search | — | packages maintained by the username (≥ standard) |
-| `reddit` | Reddit public JSON | — | account (≥ quick); Reddit often refuses unauthenticated API access (403/429) |
+| `reddit` | Reddit public JSON | `ATLAS_ENABLE_REDDIT=true` (opt-in) | account (≥ quick); Reddit refuses unauthenticated requests from most networks (HTTP 403) |
 | `mastodon` | Mastodon account lookup | `ATLAS_MASTODON_INSTANCES` (has a default) | lookup on configured instances (≥ standard) |
 | `hackernews` | Hacker News Firebase API | — | profile (≥ standard) |
 | `keybase` | Keybase lookup API | — | proofs become confirmed links between accounts (≥ standard) |

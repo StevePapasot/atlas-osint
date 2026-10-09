@@ -4,6 +4,7 @@
  *  - Internet Archive Wayback Machine CDX API (first/last capture dates)
  */
 import type { NormalizedRecord, Provider } from '../types';
+import { ProviderError } from '../types';
 import { makeRecord, parseSourceDate } from '../util';
 import { normalizeDomain } from '@/shared/targets';
 
@@ -84,7 +85,14 @@ export const crtShProvider: Provider = {
   },
   async healthCheck(ctx) {
     const t = Date.now();
-    await ctx.http.request('https://crt.sh/?q=iana.org&output=json&limit=1', { timeoutMs: 20000 });
+    try {
+      await ctx.http.request('https://crt.sh/?q=iana.org&output=json&exclude=expired&deduplicate=Y', { timeoutMs: 30000 });
+    } catch (err) {
+      if (err instanceof ProviderError && err.category === 'timeout') {
+        throw new ProviderError('timeout', 'crt.sh did not answer within 30 s. It is a free community service that is often overloaded; investigations retry it automatically.', true);
+      }
+      throw err;
+    }
     return { status: 'healthy', message: 'crt.sh responded.', latencyMs: Date.now() - t };
   },
 };

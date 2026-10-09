@@ -129,6 +129,11 @@ export const intelxProvider: Provider = {
     }
     return { records: out.slice(0, 20) };
   },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    await ctx.http.request(`${ctx.env.INTELX_API_URL.replace(/\/$/, '')}/authenticate/info`, { headers: { 'x-key': ctx.env.INTELX_API_KEY! } });
+    return { status: 'healthy', message: 'Intelligence X accepted the key.', latencyMs: Date.now() - t };
+  },
 };
 
 /** Generic adapter for an organisation's own authorised dark-web/threat-intel index exposing a simple JSON API. */

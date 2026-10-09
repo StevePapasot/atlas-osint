@@ -142,6 +142,21 @@ export const githubProvider: Provider = {
     if (res.status === 404) return notFound('GitHub', username);
     return { records: [profileRecord(this, ctx, input, githubProfile(res.json<GithubUser>()))] };
   },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    const token = ctx.env.GITHUB_TOKEN_OSINT;
+    // The rate-limit endpoint does not count against the limit; with a token it also proves the token is accepted.
+    const res = await ctx.http.request('https://api.github.com/rate_limit', {
+      headers: { accept: 'application/vnd.github+json', 'x-github-api-version': '2022-11-28', ...(token ? { authorization: `Bearer ${token}` } : {}) },
+    });
+    const core = res.json<{ resources?: { core?: { limit: number; remaining: number } } }>().resources?.core;
+    const quota = core ? ` (${core.remaining} of ${core.limit} requests left this hour)` : '';
+    return {
+      status: core?.remaining === 0 ? 'degraded' : 'healthy',
+      message: token ? `GitHub accepted the token${quota}.` : `GitHub REST API reachable without a token${quota}.`,
+      latencyMs: Date.now() - t,
+    };
+  },
 };
 
 interface GithubUser {
@@ -270,25 +285,41 @@ export const npmProvider: Provider = {
 };
 
 // --------------------------------------------------------------------------------------------- Reddit
+async function redditRequest(ctx: ProviderContext, url: string) {
+  try {
+    return await ctx.http.request(url, { allowStatus: [404] });
+  } catch (err) {
+    if (err instanceof ProviderError && err.category === 'auth') {
+      throw new ProviderError(
+        'auth',
+        'Reddit refused the request (HTTP 403). Reddit blocks unauthenticated access to its JSON endpoints from most networks; ' +
+          'ATLAS does not work around this. Set ATLAS_ENABLE_REDDIT=false to stop trying.',
+      );
+    }
+    throw err;
+  }
+}
+
 export const redditProvider: Provider = {
   id: 'reddit',
   name: 'Reddit',
   category: 'username',
   kind: 'live',
   reliability: 'reputable',
-  description: 'Public Reddit account metadata (about.json).',
+  description: 'Public Reddit account metadata (about.json). Opt-in: Reddit refuses most unauthenticated requests.',
   homepage: 'https://www.reddit.com',
   docsUrl: 'https://www.reddit.com/dev/api/#GET_user_{username}_about',
   operations: [{ id: 'reddit_user', label: 'Reddit account', targetTypes: ['username'], module: 'username', minDepth: 'quick' }],
-  config: [],
+  config: [{ env: 'ATLAS_ENABLE_REDDIT', label: 'Opt-in flag (ATLAS_ENABLE_REDDIT=true)' }],
+  enabledByEnv: (env) => env.ATLAS_ENABLE_REDDIT === true,
   timeoutMs: 12000,
   maxRetries: 1,
   concurrency: 1,
   minIntervalMs: 2000,
-  limitations: ['Reddit restricts unauthenticated API access; requests may be refused (HTTP 403/429).'],
+  limitations: ['Reddit has refused unauthenticated requests to its JSON endpoints since 2026 (HTTP 403); ATLAS does not work around this.'],
   async run(input, ctx) {
     const username = usernameOnly(input);
-    const res = await ctx.http.request(`https://www.reddit.com/user/${encodeURIComponent(username)}/about.json?raw_json=1`, { allowStatus: [404] });
+    const res = await redditRequest(ctx, `https://www.reddit.com/user/${encodeURIComponent(username)}/about.json?raw_json=1`);
     if (res.status === 404) return notFound('Reddit', username);
     const d = res.json<{ data?: { name: string; created_utc: number; link_karma: number; comment_karma: number; is_suspended?: boolean; subreddit?: { public_description?: string; title?: string } } }>().data;
     if (!d || d.is_suspended) return { records: [], notes: [d?.is_suspended ? 'Account suspended.' : 'No data.'] };
@@ -306,6 +337,11 @@ export const redditProvider: Provider = {
         }),
       ],
     };
+  },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    await redditRequest(ctx, 'https://www.reddit.com/user/reddit/about.json?raw_json=1');
+    return { status: 'healthy', message: 'Reddit public JSON endpoint answered from this network.', latencyMs: Date.now() - t };
   },
 };
 
@@ -481,6 +517,11 @@ export const youtubeProvider: Provider = {
         }),
       ],
     };
+  },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    await ctx.http.request(`https://www.googleapis.com/youtube/v3/i18nLanguages?part=snippet&hl=en&key=${encodeURIComponent(ctx.env.YOUTUBE_API_KEY!)}`);
+    return { status: 'healthy', message: 'YouTube Data API accepted the key (1 quota unit used).', latencyMs: Date.now() - t };
   },
 };
 

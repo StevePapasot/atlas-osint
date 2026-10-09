@@ -72,7 +72,7 @@ export const etherscanProvider: Provider = {
     const key = encodeURIComponent(ctx.env.ETHERSCAN_API_KEY!);
     const base = 'https://api.etherscan.io/v2/api?chainid=1';
     const bal = (await ctx.http.request(`${base}&module=account&action=balance&address=${addr}&tag=latest&apikey=${key}`)).json<{ status: string; message: string; result: string }>();
-    if (bal.status !== '1') throw new ProviderError('upstream_error', `Etherscan: ${bal.message}`);
+    if (bal.status !== '1') throw new ProviderError(/api key/i.test(String(bal.result)) ? 'auth' : 'upstream_error', `Etherscan: ${etherscanReason(bal)}`);
     const first = (await ctx.http.request(`${base}&module=account&action=txlist&address=${addr}&startblock=0&endblock=99999999&page=1&offset=1&sort=asc&apikey=${key}`)).json<{ result: Array<{ timeStamp: string; hash: string }> | string }>();
     const firstTx = Array.isArray(first.result) ? first.result[0] : undefined;
     const eth = Number(BigInt(bal.result) / 10n ** 12n) / 1e6;
@@ -94,6 +94,20 @@ export const etherscanProvider: Provider = {
       ],
     };
   },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    const key = encodeURIComponent(ctx.env.ETHERSCAN_API_KEY!);
+    const res = await ctx.http.request(`https://api.etherscan.io/v2/api?chainid=1&module=account&action=balance&address=0x${'0'.repeat(40)}&tag=latest&apikey=${key}`);
+    const d = res.json<{ status: string; message: string; result: string }>();
+    if (d.status !== '1') throw new ProviderError('auth', `Etherscan did not accept the key: ${etherscanReason(d)}`);
+    return { status: 'healthy', message: 'Etherscan accepted the key.', latencyMs: Date.now() - t };
+  },
 };
+
+/** Etherscan reports errors with HTTP 200, status "0" and the reason in `result` (e.g. "Invalid API Key (#err2)|…"). */
+function etherscanReason(d: { message: string; result: unknown }): string {
+  const reason = typeof d.result === 'string' && !/^\d+$/.test(d.result) ? d.result : d.message;
+  return reason.split('|')[0]!.replace(/[A-Za-z0-9]{30,}/g, '[REDACTED]').slice(0, 160);
+}
 
 export const CRYPTO_PROVIDERS: Provider[] = [blockstreamProvider, etherscanProvider];

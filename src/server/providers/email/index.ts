@@ -66,6 +66,18 @@ export const hibpProvider: Provider = {
     });
     return { records };
   },
+  async healthCheck(ctx) {
+    const t = Date.now();
+    const res = await ctx.http.request('https://haveibeenpwned.com/api/v3/subscription/status', {
+      headers: { 'hibp-api-key': ctx.env.HIBP_API_KEY!, 'user-agent': ctx.env.ATLAS_HTTP_USER_AGENT },
+    });
+    const sub = res.json<{ SubscriptionName?: string; SubscribedUntil?: string }>();
+    return {
+      status: 'healthy',
+      message: `HIBP accepted the key${sub.SubscriptionName ? ` (${sub.SubscriptionName}${sub.SubscribedUntil ? `, until ${sub.SubscribedUntil.slice(0, 10)}` : ''})` : ''}.`,
+      latencyMs: Date.now() - t,
+    };
+  },
 };
 
 export const gravatarProvider: Provider = {

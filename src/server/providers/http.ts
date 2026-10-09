@@ -1,5 +1,6 @@
 import 'server-only';
 import { Agent, EnvHttpProxyAgent, fetch as undiciFetch, type Dispatcher } from 'undici';
+import { redactSensitiveText, redactString } from '../security/redact';
 import { assertPublicHost, assertSafeUrlShape, guardedLookup, SsrfBlockedError } from '../security/ssrf';
 import { ProviderError, type HttpClient, type HttpRequestOptions, type HttpResponse } from './types';
 
@@ -60,6 +61,48 @@ async function readLimited(res: Response, maxBytes: number): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
+/** The message part of common API error bodies: Brave/VirusTotal/Google `{error: {code, detail|message}}`,
+ * AbuseIPDB `{errors: [{detail}]}`, SerpApi/Shodan `{error: "…"}`, GitHub `{message}`, FastAPI `{detail}`. */
+function errorMessageFromJson(body: unknown): string {
+  if (typeof body === 'string') return body;
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return '';
+  const o = body as Record<string, unknown>;
+  const str = (...vals: unknown[]) => vals.find((v): v is string => typeof v === 'string' && v.trim() !== '');
+  const err = o.error ?? (Array.isArray(o.errors) ? o.errors[0] : undefined);
+  if (typeof err === 'string') return err;
+  if (err && typeof err === 'object') {
+    const e = err as Record<string, unknown>;
+    return [str(e.code, e.status, e.type), str(e.detail, e.message, e.title, e.msg)].filter(Boolean).join(': ');
+  }
+  const detail = Array.isArray(o.detail) ? (o.detail[0] as { msg?: unknown } | undefined)?.msg : o.detail;
+  return str(o.message, detail, o.title, o.error_description) ?? '';
+}
+
+/**
+ * A short, single-line explanation from an error response, so users see why a provider refused a request
+ * (for example Brave's `SUBSCRIPTION_TOKEN_INVALID`). The request's own credentials and anything that looks like a
+ * key or personal identifier are removed; HTML pages are ignored.
+ */
+export function errorDetail(text: string, contentType: string, credentials: string[]): string {
+  const t = text.trim();
+  if (!t || /html/i.test(contentType) || t.startsWith('<')) return '';
+  let detail = '';
+  try {
+    detail = errorMessageFromJson(JSON.parse(t));
+  } catch {
+    detail = /json/i.test(contentType) ? '' : (t.split('\n')[0] ?? '');
+  }
+  for (const c of credentials) if (c.length >= 6) detail = detail.split(c).join('[REDACTED]');
+  detail = redactSensitiveText(redactString(detail))
+    .replace(/\b(?=[A-Za-z0-9_-]*\d)[A-Za-z0-9_-]{32,}\b/g, '[REDACTED]')
+    .replace(/[\u0000-\u001f\u007f]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return detail.length > 200 ? `${detail.slice(0, 199)}…` : detail;
+}
+
+/** Request headers that never carry credentials (everything else is treated as secret in error details). */
+const PLAIN_HEADERS = new Set(['accept', 'accept-language', 'content-type', 'user-agent', 'parallel-beta']);
 const MAX_REDIRECTS = 5;
 /** Headers that may follow a redirect to a different origin; everything else (API keys!) is dropped. */
 const CROSS_ORIGIN_SAFE_HEADERS = new Set(['accept', 'accept-language']);
@@ -88,6 +131,9 @@ export function createHttpClient(opts: { signal: AbortSignal; userAgent: string;
       const timeoutMs = req.timeoutMs ?? opts.defaultTimeoutMs;
       const timeoutSignal = AbortSignal.timeout(timeoutMs);
       const signal = AbortSignal.any([opts.signal, timeoutSignal]);
+      // A caller's own deadline (e.g. a health check's AbortSignal.timeout) is a timeout too, not a cancellation.
+      const callerTimedOut = () => (opts.signal.reason as { name?: string } | undefined)?.name === 'TimeoutError';
+      const timedOut = () => new ProviderError('timeout', `No answer within ${timeoutMs < 1000 ? `${timeoutMs} ms` : `${Math.round(timeoutMs / 1000)} s`}.`, true);
       const origin = parsed.origin;
       let method = req.method ?? 'GET';
       let body = req.body;
@@ -99,8 +145,8 @@ export function createHttpClient(opts: { signal: AbortSignal; userAgent: string;
         try {
           res = (await undiciFetch(parsed.toString(), { method, headers, body, signal, redirect: 'manual', dispatcher: dispatcher() })) as unknown as Response;
         } catch (err) {
+          if (timeoutSignal.aborted || callerTimedOut()) throw timedOut();
           if (opts.signal.aborted) throw new ProviderError('cancelled', 'Request cancelled.');
-          if (timeoutSignal.aborted) throw new ProviderError('timeout', `Timed out after ${timeoutMs} ms.`, true);
           const d = describeNetworkError(err);
           throw new ProviderError('network', d.message, !d.denied);
         }
@@ -123,24 +169,38 @@ export function createHttpClient(opts: { signal: AbortSignal; userAgent: string;
       }
       const allow = new Set(req.allowStatus ?? []);
       if (!res.ok && !allow.has(res.status)) {
-        await res.body?.cancel().catch(() => undefined);
+        // Error bodies of fixed provider endpoints explain the refusal; content from untrusted URLs is never shown.
+        let detail = '';
+        if (strict) {
+          await res.body?.cancel().catch(() => undefined);
+        } else {
+          const body = await readLimited(res, 16 * 1024).catch(() => '');
+          const credentials = [
+            ...Object.entries(req.headers ?? {})
+              .filter(([k]) => !PLAIN_HEADERS.has(k.toLowerCase()))
+              .flatMap(([, v]) => [v, v.replace(/^(Bearer|Basic|token)\s+/i, '')]),
+            ...new URL(url).searchParams.values(),
+          ];
+          detail = errorDetail(body, res.headers.get('content-type') ?? '', credentials);
+        }
+        const sentence = (head: string) => (detail ? `${head}: ${detail}${/[.!?…]$/.test(detail) ? '' : '.'}` : `${head}.`);
         if (res.status === 401 || res.status === 403) {
-          throw new ProviderError('auth', `Access denied by provider (HTTP ${res.status}). Check credentials or access tier.`);
+          throw new ProviderError('auth', `${sentence(`Access denied by provider (HTTP ${res.status})`)} Check credentials or access tier.`);
         }
         if (res.status === 429) {
           const ra = Number(res.headers.get('retry-after'));
           const retryAfterMs = Number.isFinite(ra) && ra > 0 ? ra * 1000 : 5000;
-          throw new ProviderError('rate_limited', 'Provider rate limit or quota reached (HTTP 429).', retryAfterMs <= 15000, retryAfterMs);
+          throw new ProviderError('rate_limited', sentence('Provider rate limit or quota reached (HTTP 429)'), retryAfterMs <= 15000, retryAfterMs);
         }
-        if (res.status >= 500) throw new ProviderError('upstream_error', `Provider error (HTTP ${res.status}).`, true);
-        throw new ProviderError('upstream_error', `Unexpected response (HTTP ${res.status}).`);
+        if (res.status >= 500) throw new ProviderError('upstream_error', sentence(`Provider error (HTTP ${res.status})`), true);
+        throw new ProviderError('upstream_error', sentence(`Provider rejected the request (HTTP ${res.status})`));
       }
       let text: string;
       try {
         text = await readLimited(res, req.maxBytes ?? 4 * 1024 * 1024);
       } catch (err) {
         if (err instanceof ProviderError) throw err;
-        if (timeoutSignal.aborted) throw new ProviderError('timeout', `Timed out after ${timeoutMs} ms.`, true);
+        if (timeoutSignal.aborted || callerTimedOut()) throw timedOut();
         throw new ProviderError('network', describeNetworkError(err).message, true);
       }
       return {

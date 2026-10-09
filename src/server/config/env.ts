@@ -42,6 +42,7 @@ const schema = z.object({
   // Username / social
   GITHUB_TOKEN_OSINT: z.string().optional(),
   YOUTUBE_API_KEY: z.string().optional(),
+  ATLAS_ENABLE_REDDIT: boolish,
   ATLAS_MASTODON_INSTANCES: z.string().default('mastodon.social,fosstodon.org,infosec.exchange'),
   // Email / breach / reputation
   HIBP_API_KEY: z.string().optional(),
