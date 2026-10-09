@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/StevePapasot/atlas-osint/security/advisories/new
+    about: Report security problems privately, not as public issues.
+  - name: Setup problems
+    url: https://github.com/StevePapasot/atlas-osint#troubleshooting
+    about: Run `npm run doctor` and check the README troubleshooting table first.

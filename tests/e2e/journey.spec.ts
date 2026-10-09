@@ -35,7 +35,16 @@ test.describe.serial('analyst journey', () => {
     await expect(page.getByRole('heading', { name: 'Sign in' })).toBeVisible();
   });
 
-  test('2. creates an account, signs out and signs back in', async () => {
+  test('2. creates an account (acceptable use required), signs out and signs back in', async () => {
+    // The policy is readable before signing up, and registration is refused until it is accepted.
+    await page.goto('/acceptable-use');
+    await expect(page.getByRole('heading', { name: 'Acceptable use policy' })).toBeVisible();
+    await page.goto('/register');
+    await page.getByLabel('Name').fill(name);
+    await page.getByLabel('Email').fill(email);
+    await page.getByLabel('Password').fill(PASSWORD);
+    await page.getByRole('button', { name: 'Create account' }).click();
+    await expect(page.locator('form').getByRole('alert')).toContainText('acceptable-use policy');
     await register(page, name, email);
     await expect(page.getByRole('heading', { name: /dashboard/i })).toBeVisible();
     await page.getByRole('button', { name: 'Account menu' }).click();

@@ -1,8 +1,11 @@
 # ATLAS OSINT — PostgreSQL + Redis + separate worker.
 #
 #   cp .env.example .env    # optional: add provider API keys
-#   docker compose up --build
+#   docker compose up -d     # uses the published image; builds from source if it cannot be pulled
 #   open http://localhost:3000   (first registered account becomes admin)
+#
+# Build from this checkout instead of using the published image:  docker compose up -d --build
+# Pin a version:  ATLAS_IMAGE=ghcr.io/stevepapasot/atlas-osint:0.1.0 docker compose up -d
 #
 # Seed the fictional demo account and investigation (optional):
 #   docker compose exec web npm run db:seed
@@ -23,8 +26,8 @@ services:
     build:
       context: .
       args:
-        NODE_IMAGE: ${NODE_IMAGE:-node:22-bookworm-slim}
-    image: atlas-osint:local
+        NODE_IMAGE: ${NODE_IMAGE:-node:24-bookworm-slim}
+    image: ${ATLAS_IMAGE:-ghcr.io/stevepapasot/atlas-osint:latest}
     env_file:
       - path: .env
         required: false
@@ -41,7 +44,7 @@ services:
     restart: unless-stopped
 
   worker:
-    image: atlas-osint:local
+    image: ${ATLAS_IMAGE:-ghcr.io/stevepapasot/atlas-osint:latest}
     command: ["node", "node_modules/tsx/dist/cli.mjs", "--conditions=react-server", "scripts/worker.ts"]
     env_file:
       - path: .env

@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-const PUBLIC_PATHS = ['/login', '/register', '/offline'];
+const PUBLIC_PATHS = ['/login', '/register', '/offline', '/acceptable-use'];
 
 function tileOrigin(): string {
   const url = process.env.NEXT_PUBLIC_MAP_TILE_URL;

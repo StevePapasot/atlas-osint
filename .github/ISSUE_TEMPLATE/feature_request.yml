@@ -1,0 +1,29 @@
+name: Feature or data-source request
+description: Suggest an improvement or a new public data source.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ATLAS only collects publicly available information through documented, lawful means.
+        Requests for credential testing, account takeover, scraping private content, bypassing access controls
+        or acquiring leaked data will be closed (see docs/ACCEPTABLE_USE.md).
+  - type: textarea
+    id: problem
+    attributes:
+      label: What are you trying to do?
+      description: The investigation task, and what is hard or missing today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: For a new data source, link its official API documentation and terms of use.
+  - type: checkboxes
+    id: lawful
+    attributes:
+      label: Confirmation
+      options:
+        - label: This feature uses only public information through documented, lawful access.
+          required: true

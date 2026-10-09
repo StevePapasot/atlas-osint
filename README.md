@@ -1,5 +1,8 @@
 # ATLAS OSINT
 
+[![CI](https://github.com/StevePapasot/atlas-osint/actions/workflows/ci.yml/badge.svg)](https://github.com/StevePapasot/atlas-osint/actions/workflows/ci.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
+
 ATLAS is a self-hostable investigation workspace for **lawful, passive open-source intelligence**. An analyst defines
 targets (people, organisations, usernames, emails, domains, IPs, URLs, phone numbers, crypto addresses, images and
 documents), ATLAS plans and runs collection against public sources, and every result is stored as hashed evidence,
@@ -28,7 +31,23 @@ the analyst before it goes into a reproducible report.
 The **demo mode** runs simulated providers with clearly fictional data (reserved `.example` domains, documentation IP
 ranges, invented handles). Every simulated record is labelled **SIMULATED** in the UI, exports and reports.
 
-## Quick start (local, no API keys)
+## Quick start with Docker (easiest)
+
+With [Docker](https://docs.docker.com/get-docker/) installed:
+
+```bash
+docker run -d --name atlas -p 3000:3000 -v atlas-data:/data -e ATLAS_COOKIE_SECURE=false ghcr.io/stevepapasot/atlas-osint:latest
+docker exec atlas npm run db:seed     # optional: fictional demo account and sample investigation
+```
+
+Open http://localhost:3000 and register (the first account becomes admin), or sign in with the demo account below.
+Images are published for x86-64 and ARM64 (including Apple Silicon and Raspberry Pi 4/5). Data lives in the
+`atlas-data` volume; update with `docker pull` and re-create the container.
+
+PostgreSQL + Redis + a separate worker: `cp .env.example .env` (optional, for provider keys), then
+`docker compose up -d`.
+
+## Quick start from source (no API keys)
 
 Requirements: **Node.js 22.19 or newer** (the current LTS from [nodejs.org](https://nodejs.org) is recommended) and npm.
 Nothing else — the database is a local SQLite file. Older Node 22 releases are refused with a clear message, because
@@ -59,19 +78,12 @@ npm run build
 npm start                   # serves on :3000, runs the job worker in-process
 ```
 
-### Docker
+### Building the Docker image yourself
 
 ```bash
 docker build -t atlas-osint .
 docker run -p 3000:3000 -v atlas-data:/data -e ATLAS_COOKIE_SECURE=false atlas-osint
-docker exec <container> npm run db:seed        # optional demo account
-```
-
-PostgreSQL + Redis + a separate worker:
-
-```bash
-cp .env.example .env        # optional: add provider keys
-docker compose up --build   # http://localhost:3000
+docker compose up -d --build        # the Compose stack, built from this checkout
 ```
 
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for PostgreSQL / Supabase, reverse proxies, scaling workers and
@@ -120,8 +132,11 @@ Key values are never sent to the browser.
 - [docs/API.md](docs/API.md) — HTTP API reference
 - [docs/SECURITY.md](docs/SECURITY.md) — threat model and controls
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) — production deployment
+- [docs/ACCEPTABLE_USE.md](docs/ACCEPTABLE_USE.md) — what ATLAS may and may not be used for
 - [docs/BUILD_PLAN.md](docs/BUILD_PLAN.md) — build plan, decisions and verification log
-- [CONTRIBUTING.md](CONTRIBUTING.md) — development workflow and conventions
+- [CHANGELOG.md](CHANGELOG.md) — release history
+- [CONTRIBUTING.md](CONTRIBUTING.md) — development workflow, conventions and releasing
+- [SECURITY.md](SECURITY.md) — how to report a vulnerability
 
 ## Project layout
 
@@ -157,4 +172,12 @@ tests/                 unit, integration (API, engine, migrations, RLS) and e2e 
 
 ## License
 
-No license has been chosen yet; all rights reserved by the repository owner until one is added.
+Copyright © 2026 StevePapasot and ATLAS OSINT contributors.
+
+ATLAS OSINT is free software, licensed under the **GNU Affero General Public License v3.0 only**
+([LICENSE](LICENSE)). You may use, study, modify and share it. If you run a **modified** version that other people
+use over a network, you must offer them the source code of your version — set `ATLAS_SOURCE_URL` to where it is
+published; the app links to it in every page footer.
+
+Use of ATLAS is also subject to the [acceptable-use policy](docs/ACCEPTABLE_USE.md): lawful, authorised, passive
+research only.

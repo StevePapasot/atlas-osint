@@ -3,7 +3,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
 import { Button } from '@/components/ui/button';
-import { Field, Input } from '@/components/ui/field';
+import { Checkbox, Field, Input } from '@/components/ui/field';
 import { api, ApiClientError } from '@/lib/api';
 
 export function AuthForm({ mode, demoHint }: { mode: 'login' | 'register'; demoHint?: boolean }) {
@@ -17,8 +17,10 @@ export function AuthForm({ mode, demoHint }: { mode: 'login' | 'register'; demoH
     setError(null);
     setLoading(true);
     const form = new FormData(e.currentTarget);
+    const body: Record<string, unknown> = Object.fromEntries(form.entries());
+    if (mode === 'register') body.acceptUse = form.get('acceptUse') === 'on';
     try {
-      await api.post(`/api/auth/${mode}`, Object.fromEntries(form.entries()));
+      await api.post(`/api/auth/${mode}`, body);
       const next = params.get('next');
       router.replace(next && next.startsWith('/') && !next.startsWith('//') ? next : '/dashboard');
       router.refresh();
@@ -44,6 +46,21 @@ export function AuthForm({ mode, demoHint }: { mode: 'login' | 'register'; demoH
         <Field label="Password" htmlFor="password" hint={mode === 'register' ? 'At least 10 characters. Passphrases are encouraged.' : undefined}>
           <Input id="password" name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} required minLength={mode === 'register' ? 10 : 1} />
         </Field>
+        {mode === 'register' ? (
+          <Checkbox
+            name="acceptUse"
+            required
+            label={
+              <>
+                I will use ATLAS only for lawful, authorised research and agree to the{' '}
+                <a href="/acceptable-use" target="_blank" rel="noopener" className="text-accent underline">
+                  acceptable-use policy
+                </a>
+                .
+              </>
+            }
+          />
+        ) : null}
         {error ? (
           <p role="alert" className="rounded-md border border-danger/30 bg-danger-soft px-3 py-2 text-sm text-danger">
             {error}

@@ -6,6 +6,7 @@ import { LayoutDashboard, FolderSearch, Plus, Settings, LogOut, PlugZap, Chevron
 import type { ReactNode } from 'react';
 import { AtlasWordmark, AtlasMark } from '@/components/brand';
 import { ThemeToggle } from './theme-toggle';
+import { AboutLine, type About } from './about-line';
 import { cn } from '@/lib/cn';
 import { api } from '@/lib/api';
 
@@ -23,7 +24,7 @@ function isActive(pathname: string, href: string) {
   return pathname === path || pathname.startsWith(`${path}/`);
 }
 
-export function AppShell({ user, children, theme }: { user: { name: string; email: string }; children: ReactNode; theme: 'system' | 'dark' | 'light' }) {
+export function AppShell({ user, children, theme, about }: { user: { name: string; email: string }; children: ReactNode; theme: 'system' | 'dark' | 'light'; about: About }) {
   const pathname = usePathname();
   const router = useRouter();
   async function signOut() {
@@ -91,7 +92,10 @@ export function AppShell({ user, children, theme }: { user: { name: string; emai
             );
           })}
         </nav>
-        <div className="border-t border-border p-3 text-[11px] leading-relaxed text-subtle">Passive, lawful collection. Coverage depends on configured providers.</div>
+        <div className="space-y-1.5 border-t border-border p-3 text-[11px] leading-relaxed text-subtle">
+          <p>Passive, lawful collection. Coverage depends on configured providers.</p>
+          <AboutLine about={about} />
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-col">

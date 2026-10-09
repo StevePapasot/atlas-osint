@@ -1,9 +1,17 @@
 {
   "name": "atlas-osint",
   "version": "0.1.0",
-  "private": true,
   "description": "ATLAS OSINT — evidence-centric open-source intelligence investigation workbench",
-  "license": "UNLICENSED",
+  "license": "AGPL-3.0-only",
+  "homepage": "https://github.com/StevePapasot/atlas-osint#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/StevePapasot/atlas-osint.git"
+  },
+  "bugs": {
+    "url": "https://github.com/StevePapasot/atlas-osint/issues"
+  },
+  "private": true,
   "engines": {
     "node": ">=22.19.0"
   },

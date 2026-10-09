@@ -12,6 +12,7 @@ export async function register(page: Page, name: string, email: string, password
   await page.getByLabel('Name').fill(name);
   await page.getByLabel('Email').fill(email);
   await page.getByLabel('Password').fill(password);
+  await page.getByLabel(/acceptable-use policy/).check();
   await page.getByRole('button', { name: 'Create account' }).click();
   await page.waitForURL('**/dashboard');
 }

@@ -13,7 +13,7 @@ ATLAS needs a long-running Node.js server (jobs, file uploads, native modules su
 serverless-only platforms are not a good fit for the worker; the web part can run anywhere Next.js runs in Node mode
 as long as a worker process runs alongside it.
 
-Requirements: Node.js ≥ 22.19 (the Docker image uses `node:22-bookworm-slim`), ~1 GB RAM per process (OCR is the
+Requirements: Node.js ≥ 22.19 (the Docker image uses `node:24-bookworm-slim`), ~1 GB RAM per process (OCR is the
 heaviest task), persistent storage for `ATLAS_DATA_DIR` (uploads) and, with SQLite, the database file.
 
 ## 1. Single process (SQLite)
@@ -30,18 +30,22 @@ server first).
 
 ## 2. Docker
 
+Released images are published to the GitHub Container Registry for `linux/amd64` and `linux/arm64`:
+`ghcr.io/stevepapasot/atlas-osint:latest`, or a pinned version such as `:0.1.0` (recommended for production).
+
 ```bash
-docker build -t atlas-osint .
 docker run -d --name atlas -p 3000:3000 -v atlas-data:/data \
   -e ATLAS_APP_URL=https://atlas.example.org \
-  --env-file .env atlas-osint
+  --env-file .env ghcr.io/stevepapasot/atlas-osint:0.1.0
 ```
+
+To build the image from source instead: `docker build -t atlas-osint .`
 
 The image runs as an unprivileged user, stores everything under `/data`, exposes port 3000 and has a health check on
 `/api/health`. Build arguments:
 
-- `NODE_IMAGE` — base image (default `node:22-bookworm-slim`; use a mirror such as
-  `mirror.gcr.io/library/node:22-bookworm-slim` if Docker Hub rate-limits you).
+- `NODE_IMAGE` — base image (default `node:24-bookworm-slim`; use a mirror such as
+  `mirror.gcr.io/library/node:24-bookworm-slim` if Docker Hub rate-limits you).
 - `BUILD_TOOLS=true` — install a compiler toolchain, needed only on platforms without prebuilt binaries for
   better-sqlite3 / sharp (prebuilt for linux x64 and arm64).
 - Behind a TLS-inspecting proxy: `--secret id=extra_ca,src=/path/to/proxy-ca.pem` (and `--network host` plus

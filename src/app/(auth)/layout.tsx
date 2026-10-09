@@ -2,11 +2,14 @@ import { redirect } from 'next/navigation';
 import { getCurrentSession } from '@/server/auth/session';
 import { AtlasWordmark } from '@/components/brand';
 import { ShieldCheck, Network, FileSearch } from 'lucide-react';
+import { aboutInfo } from '@/server/config/about';
+import { AboutLine } from '@/components/layout/about-line';
 
 export const dynamic = 'force-dynamic';
 
 export default async function AuthLayout({ children }: { children: React.ReactNode }) {
   if (await getCurrentSession()) redirect('/dashboard');
+  const about = aboutInfo();
   return (
     <div className="grid min-h-dvh lg:grid-cols-[1.1fr_1fr]">
       <aside className="relative hidden overflow-hidden border-r border-border bg-surface lg:flex lg:flex-col lg:justify-between lg:p-12">
@@ -29,7 +32,10 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             </li>
           </ul>
         </div>
-        <p className="relative text-xs text-subtle">For authorised research, defensive security and lawful investigations only.</p>
+        <div className="relative space-y-1">
+          <p className="text-xs text-subtle">For authorised research, defensive security and lawful investigations only.</p>
+          <AboutLine about={about} />
+        </div>
       </aside>
       <main className="flex items-center justify-center px-4 py-10 sm:px-8">
         <div className="w-full max-w-sm">
@@ -37,6 +43,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
             <AtlasWordmark />
           </div>
           {children}
+          <AboutLine about={about} className="mt-10 text-center lg:hidden" />
         </div>
       </main>
     </div>

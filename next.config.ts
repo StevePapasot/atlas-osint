@@ -1,5 +1,9 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import type { NextConfig } from 'next';
 import { nodeVersionProblem } from './src/server/config/runtime';
+
+const { version } = JSON.parse(fs.readFileSync(path.join(__dirname, 'package.json'), 'utf8')) as { version: string };
 
 // Stop `next dev` / `next build` / `next start` with a clear message on unsupported Node.js versions, instead of
 // letting the SQLite driver crash the server silently later.
@@ -23,6 +27,7 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  env: { ATLAS_VERSION: version },
   // This folder is the project root. Without it, a stray package-lock.json in a parent folder (e.g. the user's home
   // directory) triggers a confusing workspace-root warning.
   turbopack: { root: __dirname },

@@ -17,6 +17,8 @@ const schema = z.object({
   DATABASE_URL: z.string().default('file:./data/atlas.db'),
   ATLAS_DATA_DIR: z.string().default('./data'),
   ATLAS_APP_URL: z.string().optional(),
+  /** Where users of this instance can get its source code (AGPL-3.0 §13). Forks running modified code must change it. */
+  ATLAS_SOURCE_URL: z.string().url().optional(),
   /** Number of reverse proxies in front of the app that append to X-Forwarded-For (0 = exposed directly). */
   ATLAS_TRUSTED_PROXY_HOPS: z.coerce.number().int().min(0).max(5).default(0),
   ATLAS_SESSION_TTL_HOURS: z.coerce.number().int().min(1).max(24 * 90).default(24 * 7),

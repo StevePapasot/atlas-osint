@@ -73,4 +73,19 @@ the suite against an already running deployment: `E2E_BASE_URL=http://host:port 
 
 - Small, focused commits with descriptive messages (what and why).
 - Describe user-visible changes, migrations, new configuration and security implications in the pull request.
-- Update `.env.example` and the relevant docs in the same change.
+- Update `.env.example` and the relevant docs in the same change, and add a line under `[Unreleased]` in
+  `CHANGELOG.md` for anything users will notice.
+
+## Releasing
+
+Releases are cut from `main` once CI is green:
+
+1. Move the `[Unreleased]` entries in `CHANGELOG.md` under a new `## [X.Y.Z] — <date>` heading and update the
+   comparison links at the bottom.
+2. Set the same version in `package.json` (and the root `version` fields in `package-lock.json`).
+3. Commit, then tag and push: `git tag vX.Y.Z && git push origin main vX.Y.Z`.
+
+The **Release** workflow checks that the tag matches `package.json`, publishes `ghcr.io/<owner>/atlas-osint` as
+`X.Y.Z`, `X.Y` and `latest` for linux/amd64 and linux/arm64, and creates a GitHub release from the changelog
+section. Run the workflow manually (Actions → Release → Run workflow) for a dry run that builds both images without
+publishing anything.

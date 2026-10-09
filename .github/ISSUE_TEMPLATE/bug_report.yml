@@ -1,0 +1,60 @@
+name: Bug report
+description: Something in ATLAS does not work as documented.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Security problems must **not** be reported here — use **Security → Report a vulnerability** instead.
+        Do not paste API keys, passwords, or real personal data you collected; replace them with placeholders.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What you did, what you expected, and what happened instead.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. …
+        2. …
+    validations:
+      required: true
+  - type: textarea
+    id: doctor
+    attributes:
+      label: Output of `npm run doctor` (or "Docker")
+      render: text
+  - type: input
+    id: version
+    attributes:
+      label: ATLAS version
+      description: Shown in the page footer and at /api/health.
+      placeholder: 0.1.0
+    validations:
+      required: true
+  - type: dropdown
+    id: install
+    attributes:
+      label: How do you run ATLAS?
+      options:
+        - npm (npm run dev / npm start)
+        - Docker image
+        - Docker Compose
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: platform
+    attributes:
+      label: Operating system and Node.js version
+      placeholder: Windows 11, Node 24.21.0
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error messages or logs
+      description: Terminal output or the browser console. Remove secrets and personal data first.
+      render: text
