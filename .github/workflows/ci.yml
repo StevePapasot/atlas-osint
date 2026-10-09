@@ -101,3 +101,14 @@ jobs:
           done
           docker logs atlas
           exit 1
+      # On main, also build the ARM64 image that releases publish, so a release never fails at tag time.
+      - uses: docker/setup-qemu-action@v3
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      - name: Build linux/arm64 image (no push)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/arm64
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
