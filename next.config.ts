@@ -23,6 +23,10 @@ const securityHeaders = [
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
+  // This folder is the project root. Without it, a stray package-lock.json in a parent folder (e.g. the user's home
+  // directory) triggers a confusing workspace-root warning.
+  turbopack: { root: __dirname },
+  outputFileTracingRoot: __dirname,
   // Do not auto-generate AGENTS.md / CLAUDE.md in the repository during `next dev`.
   agentRules: false,
   reactStrictMode: true,

@@ -8,19 +8,20 @@
     "node": ">=22.19.0"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "node scripts/doctor.mjs && next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node scripts/doctor.mjs && next start",
     "worker": "tsx --conditions=react-server scripts/worker.ts",
     "db:migrate": "tsx --conditions=react-server scripts/migrate.ts",
     "db:seed": "tsx --conditions=react-server scripts/seed.ts",
-    "setup": "npm run db:migrate && npm run db:seed",
+    "setup": "node scripts/doctor.mjs --full && npm run db:migrate && npm run db:seed",
     "lint": "eslint .",
     "typecheck": "next typegen && tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:e2e": "playwright test",
-    "providers:check": "tsx --conditions=react-server scripts/providers-check.ts"
+    "providers:check": "tsx --conditions=react-server scripts/providers-check.ts",
+    "doctor": "node scripts/doctor.mjs --full"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.131.0",

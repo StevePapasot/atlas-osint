@@ -77,6 +77,19 @@ docker compose up --build   # http://localhost:3000
 See [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md) for PostgreSQL / Supabase, reverse proxies, scaling workers and
 hardening.
 
+## Troubleshooting
+
+Run `npm run doctor` first: it checks the Node.js version, that every dependency's files are present and that the
+database driver works, and says what to do. It also runs automatically before `npm run setup`, `npm run dev` and
+`npm start`.
+
+| Symptom | Cause and fix |
+| --- | --- |
+| `npm run dev` prints "Ready … Running next.config.ts" and returns to the prompt; setup stops silently | Node.js older than 22.19 (the SQLite driver crashes without a message on older Node 22). Install the current LTS from nodejs.org or `nvm install lts`, reopen the terminal, check `node -v` |
+| `Module not found: Can't resolve './…'` inside `node_modules/…`, or `npm run doctor` reports missing files | Damaged `node_modules` (interrupted install, or antivirus removed files). Delete `node_modules` and `.next`, run `npm cache verify`, then `npm install`. If it recurs, check your antivirus quarantine |
+| npm itself fails: `Cannot find module …` under `…\nvm\v24…\node_modules\npm\…` | The Node installation's own npm is damaged (often after `npm install -g npm` on Windows). Reinstall that version: `nvm uninstall <version>` then `nvm install <version>` and `nvm use <version>` |
+| Browser shows "Unable to connect" at http://localhost:3000 | The server is not running — keep the `npm run dev` window open and check it for errors |
+
 ## Configuration
 
 All configuration is via environment variables; [.env.example](.env.example) documents every one. Nothing is
@@ -94,6 +107,7 @@ Key values are never sent to the browser.
 | `npm run db:migrate` | Apply database migrations |
 | `npm run db:seed` | Create the demo account and a sample (simulated) investigation |
 | `npm run setup` | Migrate + seed |
+| `npm run doctor` | Check Node.js version, installed files and the database driver |
 | `npm run providers:check [-- --live] [-- --json]` | Provider configuration report; `--live` runs real connectivity checks |
 | `npm run lint` / `npm run typecheck` | ESLint / TypeScript |
 | `npm test` | Unit + integration tests (Vitest; SQLite, or PostgreSQL with `TEST_DATABASE_URL`) |
