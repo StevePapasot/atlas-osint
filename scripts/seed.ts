@@ -4,6 +4,7 @@
  *   ATLAS_DEMO_PASSWORD  (default atlas-demo-2026)
  *   ATLAS_SEED_INVESTIGATION=false to skip creating the sample investigation
  */
+import './load-env';
 import { closeDb, db } from '../src/server/db/client';
 import { migrateToLatest } from '../src/server/db/migrate';
 import { createUser, findUserByEmail } from '../src/server/repositories/users';

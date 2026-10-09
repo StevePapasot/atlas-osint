@@ -316,6 +316,16 @@ function ApiStatus({ data }: { data: SettingsData }) {
     <Card>
       <CardHeader title="API configuration status" description="Presence only — secret values are never displayed or sent to the browser." />
       <CardBody className="space-y-4">
+        <div className="rounded-lg border border-border bg-surface-2/60 px-4 py-3 text-sm text-muted">
+          <p className="font-medium text-fg">How to add API keys</p>
+          <p className="mt-1">
+            Keys are set on the server, not in this page, so they never pass through a browser. In the ATLAS folder, copy{' '}
+            <code className="font-mono text-xs">.env.example</code> to <code className="font-mono text-xs">.env</code>, put your keys after the
+            matching names (for example <code className="font-mono text-xs">SHODAN_API_KEY=…</code>), save, and restart ATLAS (stop{' '}
+            <code className="font-mono text-xs">npm run dev</code> with Ctrl+C and start it again; with Docker, pass the file with{' '}
+            <code className="font-mono text-xs">--env-file .env</code>). Keys are optional — many sources work without one.
+          </p>
+        </div>
         <ul className="grid gap-1.5 text-sm sm:grid-cols-2">
           {Object.entries(s.secrets).map(([k, present]) => (
             <li key={k} className="flex items-center justify-between gap-2 rounded-md border border-border px-3 py-1.5">

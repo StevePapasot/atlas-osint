@@ -2,6 +2,7 @@
  * Apply database migrations: `npm run db:migrate`
  * Uses DATABASE_URL (default: file:./data/atlas.db). Works for SQLite and PostgreSQL.
  */
+import './load-env';
 import { closeDb, db, dialect } from '../src/server/db/client';
 import { migrateToLatest } from '../src/server/db/migrate';
 

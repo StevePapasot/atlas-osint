@@ -5,6 +5,7 @@
  * printed). With --live it runs each usable provider's health check against the real service, so you can see which
  * integrations actually work from this machine and network (egress proxies, firewalls and quotas all show up here).
  */
+import './load-env';
 import { db, closeDb } from '../src/server/db/client';
 import { migrateToLatest } from '../src/server/db/migrate';
 import { env } from '../src/server/config/env';

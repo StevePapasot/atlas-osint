@@ -6,6 +6,15 @@ All notable changes to ATLAS OSINT are documented here. The format follows
 
 ## [Unreleased]
 
+### Fixed
+
+- Command-line scripts (`providers:check`, `worker`, `db:migrate`, `db:seed`) now read `.env` like the web app, so
+  API keys in `.env` are used everywhere.
+
+### Changed
+
+- Settings → API configuration explains how to add API keys.
+
 ## [0.1.0] — 2026-10-09
 
 ### Added

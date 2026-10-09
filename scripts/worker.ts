@@ -2,6 +2,7 @@
  * Standalone job worker: `npm run worker`
  * Use with ATLAS_INPROCESS_WORKER=false on the web process for a separate, horizontally scalable worker.
  */
+import './load-env';
 import { closeDb, db } from '../src/server/db/client';
 import { migrateToLatest } from '../src/server/db/migrate';
 import { env } from '../src/server/config/env';
