@@ -1,6 +1,6 @@
 {
   "name": "atlas-osint",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "ATLAS OSINT — evidence-centric open-source intelligence investigation workbench",
   "license": "AGPL-3.0-only",
   "homepage": "https://github.com/StevePapasot/atlas-osint#readme",

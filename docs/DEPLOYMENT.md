@@ -31,12 +31,12 @@ server first).
 ## 2. Docker
 
 Released images are published to the GitHub Container Registry for `linux/amd64` and `linux/arm64`:
-`ghcr.io/stevepapasot/atlas-osint:latest`, or a pinned version such as `:0.1.0` (recommended for production).
+`ghcr.io/stevepapasot/atlas-osint:latest`, or a pinned version such as `:0.1.1` (recommended for production).
 
 ```bash
 docker run -d --name atlas -p 3000:3000 -v atlas-data:/data \
   -e ATLAS_APP_URL=https://atlas.example.org \
-  --env-file .env ghcr.io/stevepapasot/atlas-osint:0.1.0
+  --env-file .env ghcr.io/stevepapasot/atlas-osint:0.1.1
 ```
 
 To build the image from source instead: `docker build -t atlas-osint .`

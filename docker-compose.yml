@@ -5,7 +5,7 @@
 #   open http://localhost:3000   (first registered account becomes admin)
 #
 # Build from this checkout instead of using the published image:  docker compose up -d --build
-# Pin a version:  ATLAS_IMAGE=ghcr.io/stevepapasot/atlas-osint:0.1.0 docker compose up -d
+# Pin a version:  ATLAS_IMAGE=ghcr.io/stevepapasot/atlas-osint:0.1.1 docker compose up -d
 #
 # Seed the fictional demo account and investigation (optional):
 #   docker compose exec web npm run db:seed

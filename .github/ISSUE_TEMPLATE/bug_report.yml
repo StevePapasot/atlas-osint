@@ -33,7 +33,7 @@ body:
     attributes:
       label: ATLAS version
       description: Shown in the page footer and at /api/health.
-      placeholder: 0.1.0
+      placeholder: 0.1.1
     validations:
       required: true
   - type: dropdown

@@ -6,11 +6,25 @@ All notable changes to ATLAS OSINT are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.1] — 2026-10-09
+
 ### Added
 
 - `npm run env:check` checks `.env` before you start ATLAS: quotes and spaces that Docker's `--env-file` would keep,
   placeholders, keys pasted into the wrong line, misspelled names, duplicates, UTF-16 files and values the app would
   refuse. It never prints values, so its output is safe to share.
+- Health checks for every provider that needs a key (Brave, SerpApi, Parallel, VirusTotal, AbuseIPDB, Shodan,
+  YouTube, HIBP, Intelligence X, Etherscan), so `providers:check -- --live` and Settings show whether each key is
+  accepted. The GitHub and IPinfo checks now use the token when one is set. See `docs/PROVIDERS.md` for which checks
+  use quota.
+
+### Changed
+
+- When a service refuses a request, the error includes the service's own error code and message (for example Brave's
+  `SUBSCRIPTION_TOKEN_INVALID`), with keys and personal data removed. Error pages of user-supplied URLs are not shown.
+- Reddit is opt-in (`ATLAS_ENABLE_REDDIT=true`): Reddit has refused unauthenticated requests since 2026, so it only
+  produced failed tasks. Its error now says so instead of asking for credentials.
+- Settings → API configuration explains how to add API keys.
 
 ### Fixed
 
@@ -18,10 +32,9 @@ All notable changes to ATLAS OSINT are documented here. The format follows
   API keys in `.env` are used everywhere.
 - A `.env` copied from `.env.example` no longer breaks the Docker image when passed with `--env-file`: the example
   no longer sets `DATABASE_URL` / `ATLAS_DATA_DIR`, which overrode the image's `/data` paths.
-
-### Changed
-
-- Settings → API configuration explains how to add API keys.
+- A health check that runs out of time is reported as a timeout instead of "Request cancelled"; the crt.sh check waits
+  30 s like investigations do.
+- The reverse-DNS check suggests `ATLAS_DNS_SERVERS` when the resolver (often Docker Desktop's) gives no PTR answers.
 
 ## [0.1.0] — 2026-10-09
 
@@ -49,5 +62,6 @@ All notable changes to ATLAS OSINT are documented here. The format follows
   `docs/PROVIDERS.md`.
 - No email verification or password reset (intended for self-hosted use by known accounts), no team sharing.
 
-[Unreleased]: https://github.com/StevePapasot/atlas-osint/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/StevePapasot/atlas-osint/compare/v0.1.1...HEAD
+[0.1.1]: https://github.com/StevePapasot/atlas-osint/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/StevePapasot/atlas-osint/releases/tag/v0.1.0
