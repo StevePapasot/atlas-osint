@@ -69,8 +69,10 @@ export function GeoMap({ items, tileUrl, onSelect }: { items: FindingItem[]; til
     };
   }, [items, tileUrl, onSelect]);
 
+  // `isolate` keeps Leaflet's own z-indexes (panes 400, controls 1000) inside the map, so dialogs, sheets and menus
+  // (z-50 and up) always render above it.
   return (
-    <div className="relative">
+    <div className="relative isolate">
       <div ref={ref} className="h-[min(65dvh,560px)] w-full rounded-xl border border-border" data-testid="geo-map" role="region" aria-label="Map of geographic findings" />
       {tileError ? (
         <p className="absolute bottom-3 left-3 z-[500] max-w-xs rounded-md border border-warning/40 bg-elevated px-3 py-2 text-xs text-fg shadow" role="status" data-testid="tile-error">

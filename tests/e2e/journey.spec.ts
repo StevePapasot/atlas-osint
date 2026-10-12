@@ -137,6 +137,33 @@ test.describe.serial('analyst journey', () => {
     await expect(card.getByText(/ATLAS E2E/)).toBeVisible();
   });
 
+  test('10b. shows locations on the map, and the map never covers the details panel', async () => {
+    await page.goto(`${workspace}/geoint`);
+    await expect(page.getByTestId('geo-map')).toBeVisible();
+    await page.getByTestId('geo-table').locator('tbody tr').first().click();
+    const sheet = page.getByRole('dialog');
+    await expect(sheet).toBeVisible();
+    // Map tiles and markers use z-index 400+; the sheet must still be the topmost element where the two overlap.
+    // Leaflet layers ignore the pointer, so make them hit-testable to see what is actually painted on top.
+    const topmostIsSheet = await page.evaluate(() => {
+      const probe = document.createElement('style');
+      probe.textContent = '[data-testid="geo-map"], [data-testid="geo-map"] * { pointer-events: auto !important; }';
+      document.head.append(probe);
+      document.querySelector('[data-testid="geo-map"]')!.scrollIntoView({ block: 'center' });
+      const map = document.querySelector('[data-testid="geo-map"]')!.getBoundingClientRect();
+      const dialog = document.querySelector('[role="dialog"]')!;
+      const box = dialog.getBoundingClientRect();
+      const x = Math.max(box.left, map.left) + 30;
+      const y = map.top + map.height / 2;
+      const hit = x > Math.min(box.right, map.right) ? 'no overlap' : dialog.contains(document.elementFromPoint(x, y));
+      probe.remove();
+      return hit;
+    });
+    expect(topmostIsSheet).toBe(true);
+    await page.keyboard.press('Escape');
+    await expect(sheet).toBeHidden();
+  });
+
   test('11–12. generates a report and downloads PDF and Markdown exports', async () => {
     await page.goto(`${workspace}/reports`);
     await page.getByLabel('Title').fill('E2E Intelligence Report');
