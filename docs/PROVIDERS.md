@@ -43,16 +43,16 @@ confirm them in your environment.
 | Status | Providers |
 | --- | --- |
 | Live-verified | `dns` (A/AAAA/MX/NS/TXT/CAA/SOA, mail policy), `dns.ptr`, `cymru`, `gitlab`, `npm`, `url.fetch`, all `local.*` analysers |
-| Key accepted by the live service (health check on a user's network, 12 October 2026, Docker Desktop on Windows); results not yet confirmed in an investigation | `brave`, `serpapi`, `parallel`, `github` (with token), `ipinfo` (with token), `abuseipdb`, `virustotal`, `etherscan` |
+| Key accepted by the live service (health check on a user's network, 12 October 2026, Docker Desktop on Windows); results not yet confirmed in an investigation | `brave`, `serpapi`, `parallel`, `github` (with token), `ipinfo` (with token), `abuseipdb`, `virustotal`, `etherscan`, `youtube`, `intelx` (free tier), `shodan` (free `oss` plan, 0 query credits; whether that plan allows host lookups is not yet confirmed) |
 | Endpoint answered a health check on the same network (9 and 12 October 2026); results not yet confirmed in an investigation | `mastodon`, `hackernews`, `keybase`, `bluesky`, `devto`, `gravatar`, `rdap`, `shodan.internetdb`, `blockstream` |
 | Fixture-tested; the live service answered only some health checks (see below) | `crtsh`, `wayback` |
-| Fixture-tested, not live-verified (host blocked or key unavailable in the build environment) | `hibp`, `intelx` |
-| Implemented, no fixture test of results yet | `youtube`, `shodan`, `ahmia`, `darkweb.custom`, `nominatim` |
+| Fixture-tested, not live-verified (host blocked or key unavailable in the build environment) | `hibp` |
+| Implemented, not live-verified, no fixture test of results yet | `ahmia`, `darkweb.custom`, `nominatim` |
 | Known not to work without credentials | `reddit` — Reddit has refused unauthenticated requests to its JSON endpoints since 2026 (HTTP 403 on the same user network); opt-in with `ATLAS_ENABLE_REDDIT=true` |
 | Simulated (demo) | `demo.search`, `demo.search-alt`, `demo.profiles`, `demo.infrastructure`, `demo.ipintel`, `demo.breach`, `demo.darkweb`, `demo.unstable` (always fails, to exercise partial completion) |
 
 Unstable on that network: `crtsh` timed out on 9 October and answered HTTP 502 on 12 October (crt.sh is a free community
-service that is often overloaded); `wayback` answered on 9 October but not within 20 s on 12 October. `brave` answered
+service that is often overloaded); `wayback` answered on 9 October, not within 20 s in the first check on 12 October, and again in a later one. `brave` answered
 HTTP 422 on 9 October and accepted the same key on 12 October; the cause was not determined (0.1.0 did not show Brave's
 error code). `dns.ptr` got no answers from Docker Desktop's resolver until `ATLAS_DNS_SERVERS` was set.
 
