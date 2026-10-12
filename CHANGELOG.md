@@ -6,6 +6,12 @@ All notable changes to ATLAS OSINT are documented here. The format follows
 
 ## [Unreleased]
 
+## [0.1.2] — 2026-10-12
+
+### Fixed
+
+- The GEOINT map no longer covers the finding details panel, dialogs and menus (Leaflet's layers sat above them).
+
 ## [0.1.1] — 2026-10-09
 
 ### Added
@@ -62,6 +68,7 @@ All notable changes to ATLAS OSINT are documented here. The format follows
   `docs/PROVIDERS.md`.
 - No email verification or password reset (intended for self-hosted use by known accounts), no team sharing.
 
-[Unreleased]: https://github.com/StevePapasot/atlas-osint/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/StevePapasot/atlas-osint/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/StevePapasot/atlas-osint/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/StevePapasot/atlas-osint/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/StevePapasot/atlas-osint/releases/tag/v0.1.0
