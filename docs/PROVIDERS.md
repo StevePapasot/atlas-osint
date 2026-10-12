@@ -43,16 +43,18 @@ confirm them in your environment.
 | Status | Providers |
 | --- | --- |
 | Live-verified | `dns` (A/AAAA/MX/NS/TXT/CAA/SOA, mail policy), `dns.ptr`, `cymru`, `gitlab`, `npm`, `url.fetch`, all `local.*` analysers |
-| Health check passed on a user's network (9 October 2026, Docker Desktop on Windows): the endpoint answered, results not yet confirmed in an investigation | `github`, `mastodon`, `hackernews`, `keybase`, `bluesky`, `devto`, `gravatar`, `rdap`, `wayback`, `shodan.internetdb`, `ipinfo`, `blockstream` |
-| Fixture-tested, not live-verified (host blocked or key unavailable in the build environment) | `brave`, `serpapi`, `parallel`, `hibp`, `crtsh`, `abuseipdb`, `virustotal`, `intelx` |
-| Implemented, no fixture test of results yet | `youtube`, `bluesky`, `devto`, `shodan`, `etherscan`, `ahmia`, `darkweb.custom`, `nominatim` |
+| Key accepted by the live service (health check on a user's network, 12 October 2026, Docker Desktop on Windows); results not yet confirmed in an investigation | `brave`, `serpapi`, `parallel`, `github` (with token), `ipinfo` (with token), `abuseipdb`, `virustotal`, `etherscan` |
+| Endpoint answered a health check on the same network (9 and 12 October 2026); results not yet confirmed in an investigation | `mastodon`, `hackernews`, `keybase`, `bluesky`, `devto`, `gravatar`, `rdap`, `shodan.internetdb`, `blockstream` |
+| Fixture-tested; the live service answered only some health checks (see below) | `crtsh`, `wayback` |
+| Fixture-tested, not live-verified (host blocked or key unavailable in the build environment) | `hibp`, `intelx` |
+| Implemented, no fixture test of results yet | `youtube`, `shodan`, `ahmia`, `darkweb.custom`, `nominatim` |
 | Known not to work without credentials | `reddit` — Reddit has refused unauthenticated requests to its JSON endpoints since 2026 (HTTP 403 on the same user network); opt-in with `ATLAS_ENABLE_REDDIT=true` |
-
-Observed in that first user check and not yet resolved: `brave` answered HTTP 422 (0.1.1 shows Brave's error code, which
-tells an invalid key from a request problem); `crtsh` did not answer within 20 s (crt.sh is often overloaded; the check
-now waits 30 s like investigations); `dns.ptr` got no PTR answer from Docker Desktop's resolver (set
-`ATLAS_DNS_SERVERS`).
 | Simulated (demo) | `demo.search`, `demo.search-alt`, `demo.profiles`, `demo.infrastructure`, `demo.ipintel`, `demo.breach`, `demo.darkweb`, `demo.unstable` (always fails, to exercise partial completion) |
+
+Unstable on that network: `crtsh` timed out on 9 October and answered HTTP 502 on 12 October (crt.sh is a free community
+service that is often overloaded); `wayback` answered on 9 October but not within 20 s on 12 October. `brave` answered
+HTTP 422 on 9 October and accepted the same key on 12 October; the cause was not determined (0.1.0 did not show Brave's
+error code). `dns.ptr` got no answers from Docker Desktop's resolver until `ATLAS_DNS_SERVERS` was set.
 
 ## Catalogue
 
