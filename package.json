@@ -80,7 +80,7 @@
     "undici": "^8.11.2",
     "unpdf": "^1.8.1",
     "world-atlas": "^2.0.2",
-    "zod": "^4.6.5"
+    "zod": "^4.6.7"
   },
   "devDependencies": {
     "@playwright/test": "^1.56.1",
